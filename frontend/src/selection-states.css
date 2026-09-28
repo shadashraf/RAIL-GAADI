@@ -1,0 +1,46 @@
+:root {
+  --selection-border: rgba(15, 23, 42, .3);
+  --selection-border-active: rgba(15, 23, 42, .45);
+  --selection-shadow: 0 0 0 2px rgba(15, 23, 42, .05);
+}
+
+:is(input, select, textarea):focus-visible {
+  border: 1px solid var(--selection-border);
+  border-color: var(--selection-border);
+  box-shadow: var(--selection-shadow);
+  outline: none;
+  transition: border-color 240ms ease, box-shadow 240ms ease;
+}
+
+:is(.premium-input-wrap, .live-train-search, .header-search, .corridor-search, .network-search, .route-filter):focus-within {
+  border-color: var(--selection-border);
+  box-shadow: var(--selection-shadow);
+  transition: border-color 240ms ease, box-shadow 240ms ease;
+}
+
+:is(.corridor-card.active, .type-filters button.active, .live-status-filters button.active, .active-corridor-items button.active, .chart-legend button.legend-active, button[aria-pressed="true"]) {
+  border: 1px solid var(--selection-border-active);
+  box-shadow: var(--selection-shadow);
+  transition: border-color 240ms ease, box-shadow 240ms ease;
+}
+
+:is(.corridor-card, .type-filters button, .live-status-filters button, .active-corridor-items button, .chart-legend button, .route-cards button, .route-train-card button, .movement-row):focus-visible {
+  border: 1px solid var(--selection-border);
+  border-color: var(--selection-border);
+  box-shadow: var(--selection-shadow);
+  outline: none;
+  transition: border-color 240ms ease, box-shadow 240ms ease;
+}
+
+:is(.route-train-card, .live-train-card-modern):has(button[aria-expanded="true"]) {
+  border-color: var(--selection-border-active);
+  box-shadow: var(--selection-shadow);
+  transition: border-color 240ms ease, box-shadow 240ms ease;
+}
+
+.halt-item.selected-halt {
+  border: 1px solid var(--selection-border-active);
+  outline: none;
+  box-shadow: var(--selection-shadow);
+  transition: border-color 240ms ease, box-shadow 240ms ease;
+}

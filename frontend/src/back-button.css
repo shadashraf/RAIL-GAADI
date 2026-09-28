@@ -1,0 +1,64 @@
+.content.has-context-back {
+  position: relative;
+}
+
+.app-back-button {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  left: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  padding: 0 11px 0 8px;
+  border: 1px solid rgba(111, 135, 153, .28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 3px 10px rgba(22, 43, 61, .08);
+  color: #263d50;
+  font: 700 11px Manrope, sans-serif;
+  cursor: pointer;
+  transition: transform 240ms ease, box-shadow 240ms ease, border-color 240ms ease, background-color 240ms ease;
+}
+
+.app-back-button svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.app-back-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(8, 117, 201, .38);
+  background: #fff;
+  box-shadow: 0 7px 16px rgba(22, 43, 61, .13);
+}
+
+.app-back-button:active {
+  transform: translateY(0) scale(.98);
+  box-shadow: 0 2px 6px rgba(22, 43, 61, .1);
+}
+
+.app-back-button:focus-visible {
+  outline: 3px solid rgba(8, 117, 201, .34);
+  outline-offset: 3px;
+}
+
+@media (max-width: 720px) {
+  .app-back-button {
+    left: 14px;
+    min-height: 24px;
+    padding-inline: 8px 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-back-button {
+    transition: none;
+  }
+}

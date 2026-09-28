@@ -1,0 +1,93 @@
+{
+  "features": [
+    "current_delay_minutes",
+    "current_speed_kmph",
+    "train_avg_speed_kmph",
+    "remaining_distance_km",
+    "target_distance_km",
+    "route_progress",
+    "scheduled_hour",
+    "scheduled_weekday",
+    "target_dwell_minutes",
+    "route_station_count",
+    "train_number",
+    "current_station_code",
+    "target_station_code"
+  ],
+  "metrics": {
+    "train": {
+      "mae_minutes": 5.164,
+      "rmse_minutes": 13.65,
+      "samples": 12449
+    },
+    "validation": {
+      "mae_minutes": 18.232,
+      "rmse_minutes": 30.978,
+      "samples": 2677
+    },
+    "test": {
+      "mae_minutes": 35.924,
+      "rmse_minutes": 69.657,
+      "samples": 2489
+    }
+  },
+  "residual_p90_minutes": 49.96820813465288,
+  "target": "future station arrival delay in minutes",
+  "split": {
+    "train_through": "2026-08-12T13:47:53",
+    "validation_through": "2026-08-31T12:29:24",
+    "train_rows": 12449,
+    "validation_rows": 2677,
+    "test_rows": 2489
+  },
+  "top_factors": [
+    {
+      "feature": "numeric__current_delay_minutes",
+      "importance": 0.804173
+    },
+    {
+      "feature": "numeric__remaining_distance_km",
+      "importance": 0.04769
+    },
+    {
+      "feature": "numeric__target_distance_km",
+      "importance": 0.045199
+    },
+    {
+      "feature": "numeric__scheduled_weekday",
+      "importance": 0.03437
+    },
+    {
+      "feature": "numeric__route_progress",
+      "importance": 0.030959
+    },
+    {
+      "feature": "numeric__scheduled_hour",
+      "importance": 0.014752
+    },
+    {
+      "feature": "numeric__current_speed_kmph",
+      "importance": 0.008937
+    },
+    {
+      "feature": "categorical__train_number_63209",
+      "importance": 0.001871
+    },
+    {
+      "feature": "numeric__target_dwell_minutes",
+      "importance": 0.00146
+    },
+    {
+      "feature": "numeric__route_station_count",
+      "importance": 0.001104
+    },
+    {
+      "feature": "numeric__train_avg_speed_kmph",
+      "importance": 0.000856
+    },
+    {
+      "feature": "categorical__train_number_63207",
+      "importance": 0.000489
+    }
+  ]
+}

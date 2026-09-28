@@ -1,0 +1,60 @@
+{
+  "approved_reasons": [
+    "Late Incoming / Departure",
+    "High Priority Train",
+    "Platform Occupied",
+    "Congestion Delay",
+    "Unexpected Halt Delay",
+    "Insufficient Evidence"
+  ],
+  "reason_priority_order": [
+    "Platform Occupied",
+    "High Priority Train",
+    "Congestion Delay",
+    "Late Incoming / Departure",
+    "Unexpected Halt Delay",
+    "Insufficient Evidence"
+  ],
+  "rules": {
+    "late_incoming_departure": {
+      "condition": "previous_departure_delay_minutes >= 5 and fresh_delay_minutes < fresh_delay_threshold",
+      "fresh_delay_threshold_minutes": 5
+    },
+    "high_priority_train": {
+      "condition": "excess_halt_minutes >= threshold and higher_priority_train_present and timing_overlap",
+      "required_evidence": [
+        "excess_halt_minutes",
+        "higher_priority_train_present",
+        "timing_overlap"
+      ]
+    },
+    "platform_occupied": {
+      "condition": "platform_unavailable_minutes >= threshold and platform_occupancy_evidence",
+      "required_evidence": [
+        "platform_unavailable_minutes",
+        "actual_occupancy_evidence"
+      ]
+    },
+    "congestion_delay": {
+      "condition": "2 consecutive segments with fresh_delay_minutes >= 5 or (fresh_delay_minutes >= 10 and speed_kmph < 15)",
+      "fresh_delay_threshold_minutes": 5,
+      "speed_threshold_kmph": 15
+    },
+    "unexpected_halt_delay": {
+      "condition": "excess_halt_minutes >= 5 and no stronger evidence",
+      "threshold_minutes": 5
+    },
+    "insufficient_evidence": {
+      "condition": "observations do not support a stronger reason",
+      "fallback": true
+    }
+  },
+  "confidence": {
+    "representation": [
+      "level",
+      "score"
+    ],
+    "scale": "0.0-1.0",
+    "notes": "Confidence should reflect evidence strength and should not be auto-forced above 90%."
+  }
+}

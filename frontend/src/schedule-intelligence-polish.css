@@ -1,0 +1,464 @@
+.schedule-intelligence {
+  --schedule-navy: #0f172a;
+  --schedule-blue: #2563eb;
+  --schedule-blue-soft: #eff6ff;
+  --schedule-green: #16a34a;
+  --schedule-red: #dc2626;
+  --schedule-muted: #64748b;
+  --schedule-line: #dbe3ea;
+  margin: 18px 0 16px;
+  padding: 18px;
+  border: 1px solid #dce4eb;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(15, 23, 42, .045);
+}
+
+.schedule-intelligence-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px 20px;
+  padding: 2px 2px 16px;
+  border-bottom: 1px solid #e8edf2;
+}
+
+.schedule-heading-copy .panel-eyebrow {
+  margin: 0 0 3px;
+  color: var(--schedule-blue);
+  font-family: Inter, "Plus Jakarta Sans", system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.schedule-heading-copy h2 {
+  margin: 2px 0 0;
+  color: var(--schedule-navy);
+  font-family: Inter, "Plus Jakarta Sans", system-ui, sans-serif;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.schedule-heading-copy p {
+  margin: 6px 0 0;
+  color: var(--schedule-muted);
+  font-family: Inter, "Plus Jakarta Sans", system-ui, sans-serif;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.schedule-heading-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.schedule-intelligence .prediction-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
+  border: 1px solid #bbf7d0;
+  border-radius: 999px;
+  background: #f0fdf4;
+  color: #15803d;
+  font: 650 10px Inter, "Plus Jakarta Sans", system-ui, sans-serif;
+  white-space: nowrap;
+}
+
+.schedule-intelligence .prediction-key i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--schedule-green);
+}
+
+.schedule-intelligence .halt-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 35px;
+  padding: 0 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #fff;
+  color: var(--schedule-navy);
+  font: 600 10px Inter, "Plus Jakarta Sans", system-ui, sans-serif;
+  transition: border-color 220ms ease, box-shadow 220ms ease, background-color 220ms ease, transform 220ms ease;
+}
+
+.schedule-intelligence .halt-toggle:hover {
+  transform: translateY(-1px);
+  border-color: #94a3b8;
+  background: #f8fafc;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, .07);
+}
+
+.schedule-intelligence .halt-toggle:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, .3);
+  outline-offset: 2px;
+}
+
+.schedule-intelligence .halt-toggle svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 220ms ease;
+}
+
+.schedule-intelligence .halt-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.schedule-legend {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 15px;
+  color: var(--schedule-muted);
+  font: 550 9px Inter, "Plus Jakarta Sans", system-ui, sans-serif;
+}
+
+.schedule-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.schedule-legend i {
+  width: 8px;
+  height: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.schedule-legend .legend-passed { border-color: var(--schedule-blue); background: var(--schedule-blue); }
+.schedule-legend .legend-current { border: 2px solid var(--schedule-blue); box-shadow: 0 0 0 2px var(--schedule-blue-soft); }
+.schedule-legend .legend-upcoming { background: #fff; }
+
+.station-timeline {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  padding: 14px 0 0;
+}
+
+.station-timeline::before {
+  position: absolute;
+  top: 14px;
+  bottom: 20px;
+  left: 17px;
+  width: 14px;
+  background-image:
+    repeating-linear-gradient(180deg, transparent 0 9px, #dce4eb 9px 11px, transparent 11px 18px),
+    linear-gradient(90deg, transparent 0 3px, #b9c6d2 3px 4px, transparent 4px 10px, #b9c6d2 10px 11px, transparent 11px);
+  background-position: center;
+  content: "";
+  pointer-events: none;
+}
+
+.station-timeline-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: stretch;
+  min-width: 0;
+}
+
+.station-rail-column {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+}
+
+.station-rail-node {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #94a3b8;
+  border-radius: 50%;
+  background: #fff;
+  transform: translate(-50%, -50%);
+}
+
+.station-timeline-item.passed .station-rail-node {
+  border-color: var(--schedule-blue);
+  background: var(--schedule-blue);
+}
+
+.station-timeline-item.current .station-rail-node {
+  width: 16px;
+  height: 16px;
+  border: 3px solid #fff;
+  background: var(--schedule-blue);
+  box-shadow: 0 0 0 2px var(--schedule-blue), 0 0 0 5px rgba(37, 99, 235, .1);
+  animation: station-current-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes station-current-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--schedule-blue), 0 0 0 5px rgba(37, 99, 235, .1); }
+  50% { box-shadow: 0 0 0 2px var(--schedule-blue), 0 0 0 7px rgba(37, 99, 235, .07); }
+}
+
+.station-train-marker {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  border: 1px solid #bfdbfe;
+  border-radius: 9px;
+  background: #fff;
+  color: var(--schedule-blue);
+  box-shadow: 0 3px 9px rgba(15, 23, 42, .12);
+  transform: translate(-50%, -50%);
+}
+
+.station-train-marker svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.station-live-now {
+  position: absolute;
+  z-index: 4;
+  top: calc(50% - 27px);
+  left: 50%;
+  padding: 3px 5px;
+  border: 1px solid #bbf7d0;
+  border-radius: 999px;
+  background: #f0fdf4;
+  color: #15803d;
+  font: 700 7px Inter, "Plus Jakarta Sans", system-ui, sans-serif;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.schedule-intelligence .station-card {
+  display: grid;
+  grid-template-columns: minmax(205px, 1.55fr) minmax(86px, .65fr) minmax(92px, .7fr) minmax(115px, .85fr);
+  align-items: center;
+  gap: 15px;
+  min-width: 0;
+  min-height: 94px;
+  padding: 13px 15px;
+  border: 1px solid #e2e8f0;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, .035);
+  opacity: 1;
+  transition: border-color 220ms ease, box-shadow 220ms ease, background-color 220ms ease, transform 220ms ease;
+}
+
+.schedule-intelligence .station-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 5px 12px rgba(15, 23, 42, .065);
+}
+
+.schedule-intelligence .station-card.passed { background: #fbfdff; }
+.schedule-intelligence .station-card.current { border-color: #bfdbfe; background: #f8fbff; box-shadow: inset 3px 0 0 var(--schedule-blue), 0 3px 10px rgba(37, 99, 235, .055); }
+.schedule-intelligence .station-card.intermediate-halt { opacity: 1; }
+
+.station-identity {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.station-card-icon {
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.station-card-icon svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.station-card.passed .station-card-icon { border-color: #dbeafe; background: #eff6ff; color: var(--schedule-blue); }
+.station-card.current .station-card-icon { border-color: #bfdbfe; background: #eff6ff; color: var(--schedule-blue); }
+
+.schedule-intelligence .station-name {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 0 !important;
+}
+
+.schedule-intelligence .station-name::before { display: none; }
+.schedule-intelligence .station-name > strong { overflow: hidden; color: var(--schedule-navy); font: 650 13px Inter, "Plus Jakarta Sans", system-ui, sans-serif; text-overflow: ellipsis; white-space: nowrap; }
+.station-code-platform { display: flex; align-items: center; gap: 6px; color: var(--schedule-muted); font: 500 9px Inter, "Plus Jakarta Sans", system-ui, sans-serif; }
+.station-code-platform b { color: #475569; font-weight: 700; letter-spacing: .04em; }
+.station-code-platform i { width: 3px; height: 3px; border-radius: 50%; background: #94a3b8; }
+.schedule-intelligence .station-ai-reason { max-width: 100%; margin: 0; color: #64748b !important; font: 500 8px Inter, "Plus Jakarta Sans", system-ui, sans-serif !important; text-overflow: ellipsis; }
+
+.station-state-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 7px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #64748b;
+  font: 600 8px Inter, "Plus Jakarta Sans", system-ui, sans-serif;
+  white-space: nowrap;
+}
+
+.station-state-badge.passed { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
+.station-state-badge.current { border-color: #bbf7d0; background: #f0fdf4; color: #15803d; }
+.station-state-badge.upcoming { color: #64748b; }
+.station-state-badge .station-live-indicator { width: 5px; height: 5px; margin: 0; background: var(--schedule-green); box-shadow: 0 0 0 2px rgba(22, 163, 74, .1); animation: none; }
+
+.station-timing-group,
+.station-prediction-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  min-width: 0;
+  padding-left: 12px;
+  border-left: 1px solid #edf1f4;
+}
+
+.station-timing-heading {
+  color: var(--schedule-muted);
+  font: 650 8px Inter, "Plus Jakarta Sans", system-ui, sans-serif;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.schedule-intelligence .arrival-time,
+.schedule-intelligence .departure-time { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; margin: 0; line-height: 1.2; }
+
+.schedule-intelligence .scheduled-time-value {
+  color: var(--schedule-navy);
+  font: 650 12px Inter, "Plus Jakarta Sans", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.schedule-intelligence .scheduled-time-value small,
+.schedule-intelligence .actual-arrival-time small,
+.schedule-intelligence .actual-departure-time small {
+  margin: 0 5px 0 0;
+  color: #94a3b8;
+  font: 600 7px Inter, "Plus Jakarta Sans", system-ui, sans-serif;
+  letter-spacing: .04em;
+}
+
+.schedule-intelligence .actual-arrival-time,
+.schedule-intelligence .actual-departure-time {
+  color: var(--schedule-blue);
+  font: 650 10px Inter, "Plus Jakarta Sans", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.schedule-intelligence .actual-departure-time { color: var(--schedule-red); }
+
+.station-prediction-group .predicted-time {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--schedule-green);
+  font: 700 15px Inter, "Plus Jakarta Sans", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.station-prediction-group .predicted-time small {
+  align-self: flex-start;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #15803d;
+  font: 600 8px Inter, "Plus Jakarta Sans", system-ui, sans-serif;
+  letter-spacing: 0;
+}
+
+.station-delay-difference {
+  align-self: flex-start;
+  padding: 3px 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #64748b;
+  font: 600 8px Inter, "Plus Jakarta Sans", system-ui, sans-serif;
+}
+
+.station-delay-difference.has-delay { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
+
+@media (max-width: 1050px) {
+  .schedule-intelligence .station-card { grid-template-columns: minmax(190px, 1.3fr) repeat(3, minmax(80px, .7fr)); gap: 10px; padding-inline: 11px; }
+  .station-identity { grid-template-columns: 26px minmax(0, 1fr); }
+  .station-state-badge { grid-column: 2; justify-self: start; }
+  .station-card-icon { width: 25px; height: 25px; }
+}
+
+@media (max-width: 720px) {
+  .schedule-intelligence { padding: 13px; border-radius: 14px; }
+  .schedule-intelligence-header { grid-template-columns: minmax(0, 1fr); gap: 11px; padding-bottom: 13px; }
+  .schedule-heading-copy h2 { font-size: 19px; }
+  .schedule-heading-controls { justify-content: space-between; flex-wrap: wrap; }
+  .schedule-legend { grid-column: 1; }
+  .station-timeline { gap: 9px; padding-top: 12px; }
+  .station-timeline::before { top: 12px; bottom: 18px; left: 13px; }
+  .station-timeline-item { grid-template-columns: 38px minmax(0, 1fr); }
+  .schedule-intelligence .station-card { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 9px; min-height: 0; padding: 12px; border-radius: 12px; }
+  .station-identity { grid-column: 1 / -1; grid-template-columns: 27px minmax(0, 1fr) auto; }
+  .station-state-badge { grid-column: auto; }
+  .station-timing-group, .station-prediction-group { min-height: 50px; padding-left: 9px; }
+  .station-prediction-group { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 5px 8px; padding-top: 8px; border-top: 1px solid #edf1f4; border-left: 0; }
+  .station-prediction-group .station-timing-heading { grid-column: 1 / -1; }
+  .station-prediction-group .predicted-time { grid-column: 1; grid-row: 2; }
+  .station-delay-difference { grid-column: 2; grid-row: 2; }
+  .station-live-now { top: calc(50% - 25px); font-size: 6px; }
+}
+
+@media (max-width: 420px) {
+  .schedule-intelligence .station-card { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .station-identity { grid-template-columns: 25px minmax(0, 1fr); }
+  .station-state-badge { grid-column: 2; }
+  .station-card-icon { width: 24px; height: 24px; }
+  .station-ai-reason { max-width: 185px; }
+  .schedule-intelligence .halt-toggle { max-width: 100%; font-size: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .station-timeline-item.current .station-rail-node,
+  .schedule-intelligence .halt-toggle,
+  .schedule-intelligence .halt-toggle svg { animation: none; transition: none; }
+}

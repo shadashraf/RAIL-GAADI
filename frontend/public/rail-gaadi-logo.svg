@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Rail Gaadi</title>
+  <desc id="desc">A geometric railway route mark with a navigation point and ETA signal.</desc>
+  <path d="M32 5 56 19v26L32 59 8 45V19L32 5Z" fill="none" stroke="#0875c9" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M18 44 27 19h10l9 25M22 35h20" fill="none" stroke="#17354d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M17 44c7-2 12-7 16-14 4-7 9-11 16-12" fill="none" stroke="#17a34a" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="17" cy="44" r="3.5" fill="#f28a2b"/>
+  <circle cx="49" cy="18" r="3.5" fill="#17a34a"/>
+  <path d="M32 12v6M29 15h6" fill="none" stroke="#f28a2b" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

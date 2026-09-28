@@ -1,0 +1,28 @@
+.current-row .station-name { position: relative; padding-left: 42px; }
+.current-row .station-name::before { content: ''; position: absolute; left: 0; top: 50%; width: 32px; height: 32px; transform: translateY(-50%); background: url('/train-marker.svg') center / contain no-repeat; filter: drop-shadow(0 3px 4px rgba(8, 117, 201, .25)); animation: trainPulse 1.8s ease-in-out infinite; }
+.live-station-marker-wrapper { background: transparent; border: none; }
+.route-station-marker-wrapper { background: transparent; border: none; }
+.route-map-svg { display: block; width: 100%; height: 100%; min-height: 305px; background: #eef5f3; }
+.india-map-silhouette { fill: #d7e8e1; stroke: #9fc5b8; stroke-width: 2; opacity: .9; }
+.route-map-label { fill: #477080; font: 700 10px 'DM Mono', monospace; letter-spacing: .12em; }
+.route-map-station-label { fill: #17364b; font: 700 11px Manrope, sans-serif; paint-order: stroke; stroke: #eef5f3; stroke-width: 4px; stroke-linejoin: round; }
+.route-station-marker { width: 14px; height: 14px; border: 3px solid #fff; border-radius: 50%; box-shadow: 0 2px 8px rgba(23, 40, 56, .3); }
+.origin-marker { background: #0875c9; }
+.destination-marker { background: #e24f38; }
+.live-station-marker { width: 26px; height: 26px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #fff 0%, #47a8ff 15%, #0f6ecb 50%, #094680 100%); box-shadow: 0 0 0 5px rgba(11, 110, 189, 0.18), 0 10px 22px rgba(15, 110, 203, 0.35); position: relative; animation: liveMarkerPulse 1.6s ease-in-out infinite; }
+.live-station-marker::after { content: ''; position: absolute; inset: 7px; border-radius: 50%; background: rgba(255,255,255,0.9); }
+@keyframes trainPulse { 0%, 100% { transform: translateY(-50%) scale(1); } 50% { transform: translateY(-50%) scale(1.08); } }
+@keyframes liveMarkerPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 5px rgba(11, 110, 189, 0.18), 0 10px 22px rgba(15, 110, 203, 0.35); } 50% { transform: scale(1.12); box-shadow: 0 0 0 8px rgba(11, 110, 189, 0.12), 0 14px 26px rgba(15, 110, 203, 0.45); } }
+.route-node-line { background: linear-gradient(180deg, #0875c9, #8fc2e8 48%, #d6e6f2); background-size: 100% 180%; animation: routeFlow 2.4s linear infinite; }
+.route-node.current-node::after { content: ''; position: absolute; left: -18px; top: 10px; width: 30px; height: 30px; background: url('/train-marker.svg') center / contain no-repeat; filter: drop-shadow(0 3px 5px rgba(8, 117, 201, .35)); animation: trainMove 1.8s ease-in-out infinite; z-index: 3; pointer-events: none; }
+.halt-item.current-halt { position: relative; background: #e9f6ff; border-left: 3px solid #0875c9; color: #0a5f9f; padding-left: 14px; }
+.halt-item.current-halt::before { content: ''; position: absolute; left: -18px; top: 50%; width: 26px; height: 26px; transform: translateY(-50%); background: url('/train-marker.svg') center / contain no-repeat; filter: drop-shadow(0 2px 4px rgba(8, 117, 201, .35)); animation: trainMove 1.8s ease-in-out infinite; z-index: 3; }
+.halt-item.selected-halt { outline: 2px solid rgba(8, 117, 201, .28); background: #eef8ff; }
+@keyframes routeFlow { from { background-position: 0 0; } to { background-position: 0 100%; } }
+@keyframes trainMove { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(5px) scale(1.08); } }
+.home-search-grid label { position: relative; }
+.home-station-suggestions { position: absolute; top: 68px; left: 0; right: 0; z-index: 20; max-height: 220px; overflow-y: auto; padding: 6px; background: #fff; border: 1px solid #d5e1e8; border-radius: 5px; box-shadow: 0 12px 24px rgba(16, 37, 61, .2); }
+.home-station-suggestions button { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 10px; border: 0; border-radius: 3px; background: transparent; color: #163d5c; text-align: left; cursor: pointer; }
+.home-station-suggestions button:hover { background: #edf7fc; }
+.home-station-suggestions strong { font-size: 12px; }
+.home-station-suggestions span { color: #6b7e89; font: 10px 'DM Mono', monospace; }

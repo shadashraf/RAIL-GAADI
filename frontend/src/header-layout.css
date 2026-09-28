@@ -1,0 +1,43 @@
+.app-header {
+  gap: 28px;
+}
+
+.app-header .brand {
+  flex: 0 0 auto;
+  min-width: 184px;
+  padding: 0 22px 0 0;
+  border-right: 1px solid var(--line);
+}
+
+.app-header .brand img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  transition: transform 220ms ease, filter 220ms ease;
+}
+
+.app-header .brand:hover img {
+  transform: translateY(-1px) scale(1.06);
+  filter: drop-shadow(0 4px 5px rgba(8, 117, 201, .2));
+}
+
+.app-header nav {
+  gap: 8px;
+  margin-left: 2px;
+}
+
+.app-header nav button {
+  padding-inline: 14px;
+}
+
+@media (max-width: 720px) {
+  .app-header .brand {
+    min-width: 0;
+    padding-right: 0;
+    border-right: 0;
+  }
+
+  .app-header {
+    gap: 10px;
+  }
+}

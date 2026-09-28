@@ -1,0 +1,88 @@
+{
+  "train_number": 13024,
+  "name": "Gaya-Howrah Express",
+  "train_type": "Express",
+  "category": "Coaching",
+  "source_station": "GAYA",
+  "destination_station": "HWH",
+  "route": [
+    {
+      "sequence_no": 1,
+      "station_code": "GAYA",
+      "station_name": "Gaya Junction",
+      "scheduled_arrival": "2026-08-10T00:00:00",
+      "scheduled_departure": "2026-08-10T00:15:00",
+      "actual_arrival": "2026-08-10T00:00:00",
+      "actual_departure": "2026-08-10T00:18:00",
+      "arrival_delay_minutes": 0,
+      "departure_delay_minutes": 3,
+      "platform_no": "1",
+      "distance_from_source_km": 0,
+      "speed_to_next_station_kmph": 62
+    },
+    {
+      "sequence_no": 2,
+      "station_code": "JHU",
+      "station_name": "Jhajha",
+      "scheduled_arrival": "2026-08-10T01:10:00",
+      "scheduled_departure": "2026-08-10T01:15:00",
+      "actual_arrival": "2026-08-10T01:12:00",
+      "actual_departure": "2026-08-10T01:22:00",
+      "arrival_delay_minutes": 2,
+      "departure_delay_minutes": 7,
+      "platform_no": "2",
+      "distance_from_source_km": 68,
+      "speed_to_next_station_kmph": 41
+    },
+    {
+      "sequence_no": 3,
+      "station_code": "KIUL",
+      "station_name": "Kiul Junction",
+      "scheduled_arrival": "2026-08-10T02:00:00",
+      "scheduled_departure": "2026-08-10T02:05:00",
+      "actual_arrival": "2026-08-10T02:06:00",
+      "actual_departure": "2026-08-10T02:14:00",
+      "arrival_delay_minutes": 6,
+      "departure_delay_minutes": 9,
+      "platform_no": "3",
+      "distance_from_source_km": 132,
+      "speed_to_next_station_kmph": 38
+    },
+    {
+      "sequence_no": 4,
+      "station_code": "MOKA",
+      "station_name": "Mokama",
+      "scheduled_arrival": "2026-08-10T02:55:00",
+      "scheduled_departure": "2026-08-10T03:00:00",
+      "actual_arrival": "2026-08-10T03:08:00",
+      "actual_departure": "2026-08-10T03:22:00",
+      "arrival_delay_minutes": 13,
+      "departure_delay_minutes": 22,
+      "platform_no": "1",
+      "distance_from_source_km": 209,
+      "speed_to_next_station_kmph": 26
+    },
+    {
+      "sequence_no": 5,
+      "station_code": "HWH",
+      "station_name": "Howrah Junction",
+      "scheduled_arrival": "2026-08-10T08:10:00",
+      "scheduled_departure": "2026-08-10T08:15:00",
+      "actual_arrival": "2026-08-10T08:50:00",
+      "actual_departure": "2026-08-10T08:55:00",
+      "arrival_delay_minutes": 40,
+      "departure_delay_minutes": 40,
+      "platform_no": "8",
+      "distance_from_source_km": 554,
+      "speed_to_next_station_kmph": 0
+    }
+  ],
+  "live_position": {
+    "latitude": 25.1234,
+    "longitude": 85.4567,
+    "current_speed_kmph": 32,
+    "current_station_code": "MOKA",
+    "previous_station_code": "KIUL",
+    "next_station_code": "HWH"
+  }
+}
