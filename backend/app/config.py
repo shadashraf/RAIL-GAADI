@@ -56,7 +56,15 @@ class Settings(BaseSettings):
 
     @property
     def trusted_host_list(self) -> list[str]:
-        return [host.strip() for host in self.trusted_hosts.split(",") if host.strip()]
+        required_hosts = [
+            "rail-gaadi-backend.onrender.com",
+            "localhost",
+            "127.0.0.1",
+        ]
+        configured_hosts = [host.strip().lower() for host in self.trusted_hosts.split(",")]
+        return list(dict.fromkeys(
+            host for host in [*required_hosts, *configured_hosts] if host and host != "*"
+        ))
 
 
 @lru_cache
