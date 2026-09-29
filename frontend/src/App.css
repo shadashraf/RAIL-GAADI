@@ -863,7 +863,7 @@ h1 {
     font-size: 14px;
   }
 
-  .header-search {
+  .app-header > .header-search {
     display: none;
   }
 

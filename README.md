@@ -1,12 +1,48 @@
 # Train Delay Intelligence
 
-> **Documentation update — 28 September 2026**
+> **Documentation update — 29 September 2026**
 >
 > The current implementation status and dated change record below document the RailETA frontend, FastAPI backend, live-provider integration, frontend-to-backend connections, and remaining work.
 
 Railway operations dashboard for live train position, scheduled versus actual timing, delay attribution, confidence scoring, and route visibility.
 
 The project has a Python FastAPI backend and a React/Vite frontend. It can work with seeded JSON files, trusted payload ingestion, or a compatible external live train API.
+
+## Work Completed — 29 September 2026
+
+This update completes a responsive CSS pass and fixes the navbar Live Search visibility regression. The work is limited to existing frontend styles; it does not change routing, React rendering conditions, search state, API calls, or backend behavior.
+
+### Responsive Layout and Route Station Names
+
+- Audited the shared and page-level CSS for mobile rules that could override the current desktop components. Removed stale mobile overrides while retaining the responsive styles needed by the existing pages.
+- Restored active dashboard, map, and train-route timeline styles in `frontend/src/App.css`; the stylesheet now keeps these component declarations separate from obsolete global mobile rules.
+- Added responsive stacking and sizing for the dashboard, route timeline, and supporting panels in `frontend/src/responsive-overrides.css`.
+- Train Route and Schedule Intelligence station names wrap instead of being ellipsized at phone and tablet widths. Station codes remain visible with their station names. The wrapping override applies through 1051px; wider desktop styling remains unchanged.
+
+### Navbar Live Search on Mobile
+
+- The existing Live Search component remains in the navbar and continues to use its original icon, premium pill styling, dropdown, autocomplete, and search handlers. No duplicate component was added.
+- Fixed the mobile hide rule in `frontend/src/App.css`: it now targets only a direct-child `.app-header > .header-search` instead of hiding the nested `.header-search` wrapper used by `.app-live-search-anchor`.
+- The Live Search trigger remains visible and clickable at narrow widths. Its existing mobile positioning avoids the hamburger, and the search panel stays within the viewport.
+
+### Verification and Limitations
+
+- `npm run build` passes (`tsc -b` and Vite production build). Vite still reports the existing advisory that a minified JavaScript chunk exceeds 500 kB; this is a bundle-size warning, not a build failure.
+- Browser checks verified the Live Search trigger and panel at 320, 360, 375, 390, 414, 768, 1024, 1280, and 1440px. The trigger did not overlap the mobile menu button, and the panel remained inside the viewport at those widths.
+- Browser checks across Home, Train Search, Live Trains, Analytics, Corridors, and Network Intelligence found no document-level horizontal overflow at 320, 390, 768, 1024, or 1440px.
+- A focused route-style check confirmed station names and codes remain visible through 1050px, with desktop name truncation behavior unchanged above the responsive breakpoint.
+- The local FastAPI service was unavailable during these checks. The trigger, panel, and responsive layout were verified, but successful API-backed autocomplete and live train selection require the backend and configured provider to be available.
+
+### Remaining Work
+
+- Restore backend/provider availability and verify API-backed Live Search suggestions, selected-train sync, live station details, manual refresh, and HTTP 429 handling.
+- Add automated browser coverage for Live Search, navigation, refresh states, and desktop/mobile visual layouts.
+- Complete provider health/quota monitoring, retry-after guidance for 429 responses, durable sync observability, and production rate limiting.
+- Replace the temporary SQLite migration with Alembic and operationalize PostgreSQL, deployment monitoring, and CI/CD.
+- Repair/replace the unreadable station-list PDF and add repeatable station-catalog and coordinate enrichment imports for offline coverage.
+- Continue ETA model calibration across train types and corridors; current regression validation and per-signal attribution are not exposed by the existing frontend API contract.
+- Connect real weather, signal, maintenance-block, and official congestion feeds where available; unavailable network conditions must remain explicitly unavailable.
+- Replace the Home live-preview card, Home corridor previews/statistics, and remaining Network Intelligence lane/hotspot/alert/health values with real API data or label them clearly as presentation examples before treating them as operational live data.
 
 ## Work Completed — 28 September 2026
 
@@ -39,18 +75,16 @@ The following frontend work is complete. These changes use the existing APIs and
 - Redesigned Schedule Intelligence with a timeline rail, API-derived station cards and status, scheduled/live/predicted timing separation, and a live marker tied to the matching current station.
 - Added consistent medium-dark borders and subtle shadows for focused/selected controls without changing unselected colors or backgrounds.
 
-### Verification and Current Limitations
+### Verification — 28 September 2026
 
 - `npm.cmd exec tsc -- -b` passes, and editor diagnostics for the changed frontend files are clean.
 - Browser checks verified the Home hero has no train-number field, the mobile Live Search trigger/panel fit within a 390px viewport, the selected-train history returns to Live Trains, and the no-data Live Trains list shows no seeded cards.
 - The local FastAPI service was unavailable during the latest Live Search verification. The frontend showed the backend connection error and unavailable detail fields; successful live selection could not be re-verified in that session.
-- A production Vite build may still be blocked by existing CSS parsing issues in shared stylesheets (`App.css` import ordering and a malformed rule in `train-search-results.css`). A passing TypeScript check is not a successful production build.
 
 ### Remaining Work
 
 - Restore backend availability and verify live train-number/name autocomplete, selected-train sync, actual station-by-station detail values, manual refresh, HTTP 429 presentation, and browser Back with the configured provider account.
 - Add automated browser coverage for Home station search, Live Search autocomplete, Live Trains/detail navigation, Back/Forward restoration, manual refresh loading/error states, and desktop/mobile layouts.
-- Fix the existing shared CSS production-build blockers, then run and record the full frontend build and lint results.
 - Complete provider health/quota monitoring, retry-after guidance for 429 responses, durable sync observability, and production rate limiting.
 - Replace the temporary SQLite migration with Alembic and operationalize PostgreSQL, deployment monitoring, and CI/CD.
 - Repair/replace the unreadable station-list PDF and add repeatable station-catalog and coordinate enrichment imports for offline coverage.
@@ -345,6 +379,7 @@ backend/
 frontend/
   src/App.tsx       Dashboard, manual live refresh, live-provider search, route grouping, and train movement state
   src/App.css       Dashboard and route-flow styling
+  src/responsive-overrides.css  Shared responsive layout, overflow, and station-name safeguards
   src/train-search-results.css  Station-pair result screen layout, cards, filters, and responsive states
   src/live-marker.css  Train marker and animated route movement styling
   src/home-premium.css  Full-bleed AI ETA homepage styling
