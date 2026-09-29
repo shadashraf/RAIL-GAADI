@@ -137,6 +137,24 @@
   }
 }
 
+@media (max-width: 1051px) {
+  .schedule-intelligence .station-name > strong,
+  .route-node-header strong {
+    display: block;
+    max-width: 100%;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
+    line-height: 1.35;
+  }
+
+  .station-code-platform {
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+}
+
 html,
 body {
   max-width: 100%;
@@ -223,6 +241,20 @@ a {
   .corridor-header {
     flex-wrap: wrap;
     align-items: flex-start;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .side-column {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .reason-card {
+    margin-top: 0;
   }
 }
 
@@ -376,6 +408,64 @@ a {
     flex-wrap: wrap;
   }
 
+  .dashboard-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .metric-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .side-column {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tabs {
+    height: auto;
+    min-height: 42px;
+    flex-wrap: wrap;
+    align-items: stretch;
+    padding-left: 8px;
+  }
+
+  .station-count {
+    width: 100%;
+    margin-left: 0;
+    padding: 4px 8px 10px;
+  }
+
+  .route-node-main {
+    grid-template-columns: 16px minmax(0, 1fr) 72px;
+    gap: 6px;
+    padding-right: 4px;
+  }
+
+  .route-node-header {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 4px 6px;
+  }
+
+  .route-node-header strong {
+    min-width: 0;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    font-size: 13px;
+    line-height: 1.3;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .route-node-copy small {
+    display: block;
+    overflow-wrap: anywhere;
+  }
+
+  .route-node-times {
+    font-size: 9px;
+  }
+
   .button,
   .primary-button,
   .mobile-nav-toggle,
@@ -408,6 +498,18 @@ a {
 
   .header-search {
     width: min(150px, calc(100vw - 125px));
+  }
+
+  .metric-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .route-node-main {
+    grid-template-columns: 16px minmax(0, 1fr) 58px;
+  }
+
+  .route-node-times {
+    font-size: 8px;
   }
 
   .live-service-header p,

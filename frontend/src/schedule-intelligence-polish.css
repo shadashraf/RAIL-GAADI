@@ -321,7 +321,17 @@
 }
 
 .schedule-intelligence .station-name::before { display: none; }
-.schedule-intelligence .station-name > strong { overflow: hidden; color: var(--schedule-navy); font: 650 13px Inter, "Plus Jakarta Sans", system-ui, sans-serif; text-overflow: ellipsis; white-space: nowrap; }
+.schedule-intelligence .station-name > strong {
+  display: block;
+  max-width: 100%;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  color: var(--schedule-navy);
+  font: 650 13px Inter, "Plus Jakarta Sans", system-ui, sans-serif;
+  line-height: 1.35;
+  text-overflow: clip;
+  white-space: normal;
+}
 .station-code-platform { display: flex; align-items: center; gap: 6px; color: var(--schedule-muted); font: 500 9px Inter, "Plus Jakarta Sans", system-ui, sans-serif; }
 .station-code-platform b { color: #475569; font-weight: 700; letter-spacing: .04em; }
 .schedule-intelligence .station-ai-reason { max-width: 100%; margin: 0; color: #64748b !important; font: 500 8px Inter, "Plus Jakarta Sans", system-ui, sans-serif !important; text-overflow: ellipsis; }
