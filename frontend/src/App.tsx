@@ -1,12 +1,12 @@
 import {
   Component,
-  Fragment,
   type ReactNode,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { LatLngBounds } from "leaflet";
 import {
@@ -17,6 +17,27 @@ import {
   Tooltip,
   useMap,
 } from "react-leaflet";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowRight,
+  faCalendarDays,
+  faCircle,
+  faLocationDot,
+  faMagnifyingGlass,
+  faRoute,
+  faRotate,
+  faSpinner,
+  faTrain,
+  faBrain,
+  faBullseye,
+  faChartLine,
+  faClock,
+  faDatabase,
+  faMap,
+  faNetworkWired,
+  faShieldHalved,
+  faListCheck,
+} from "@fortawesome/free-solid-svg-icons";
 import "leaflet/dist/leaflet.css";
 import "./App.css";
 import "./live-marker.css";
@@ -27,6 +48,8 @@ import "./delay-analytics.css";
 import "./corridors.css";
 import "./live-service.css";
 import "./refresh-live.css";
+import "./floating-refresh.css";
+import "./request-processing.css";
 import "./train-search-results.css";
 import "./station-search-results-polish.css";
 import "./network-intelligence.css";
@@ -34,6 +57,7 @@ import "./network-intelligence-kpis.css";
 import "./live-service-time.css";
 import "./live-service-polish.css";
 import "./home-premium.css";
+import "./home-icons.css";
 import "./live-trains.css";
 import "./navbar-polish.css";
 import "./navbar-buttons.css";
@@ -46,12 +70,22 @@ import "./search-icon.css";
 import "./back-button.css";
 import "./selection-states.css";
 import "./home-live-search.css";
-import { api, ApiError } from "./services/api";
+import "./responsive-overrides.css";
+import {
+  api,
+  ApiError,
+  getProcessingRequestVisible,
+  subscribeToApiRequests,
+} from "./services/api";
 
 type Page = "home" | "search" | "live" | "analytics" | "corridors" | "network";
 type DetailContext = {
   parentPage: Page;
   label: string;
+  routeSegment?: {
+    fromStationCode: string;
+    toStationCode: string;
+  };
 };
 type Train = {
   train_number: string;
@@ -154,6 +188,8 @@ type LivePosition = {
   previous_station_code: string | null;
   next_station_code: string | null;
   current_speed_kmph: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
   updated_at: string | null;
 };
 
@@ -335,7 +371,6 @@ type AnalyticsDatum = {
 };
 
 function DonutChart({ data, totalDelay }: { data: AnalyticsDatum[]; totalDelay: number | null }) {
-  const [active, setActive] = useState(0);
   const total = data.reduce((sum, item) => sum + item.count, 0);
   let offset = 0;
   const gradient = data
@@ -347,29 +382,13 @@ function DonutChart({ data, totalDelay }: { data: AnalyticsDatum[]; totalDelay: 
     .join(", ");
 
   return (
-    <div className="chart-content donut-layout">
+    <div className="analytics-donut-wrap">
       {data.length > 0 ? <div className="donut-chart" style={{ background: `conic-gradient(${gradient})` }} aria-label="Reported delay reasons by active service">
         <div className="donut-hole">
-          <strong>{totalDelay == null ? "—" : `${Math.round(totalDelay)} min`}</strong>
-          <span>Total delay</span>
+          <strong>{totalDelay == null ? "Unavailable" : `${Math.round(totalDelay)} min`}</strong>
+          <span>Total network delay</span>
         </div>
       </div> : <div className="analytics-chart-empty">Reported reason data unavailable</div>}
-      <div className="chart-legend">
-        {data.map((item, index) => (
-          <button
-            key={item.label}
-            className={active === index ? "legend-active" : ""}
-            onMouseEnter={() => setActive(index)}
-            onFocus={() => setActive(index)}
-            onClick={() => setActive(index)}
-            title={`${item.count} active service records`}
-          >
-            <i style={{ background: item.color }} />
-            <span>{item.label}</span>
-            <b>{total ? `${Math.round((item.count / total) * 100)}%` : "—"}</b>
-          </button>
-        ))}
-      </div>
     </div>
   );
 }
@@ -377,21 +396,35 @@ function DonutChart({ data, totalDelay }: { data: AnalyticsDatum[]; totalDelay: 
 type DelayComparisonDatum = { label: string; scheduled: number | null; actual: number | null };
 
 function DelayBarChart({ data }: { data: DelayComparisonDatum[] }) {
-  const max = Math.max(1, ...data.map((item) => Math.abs(item.actual ?? 0)));
+  const availableActuals = data
+    .map((item) => item.actual)
+    .filter((value): value is number => value != null && Number.isFinite(value));
+  const max = Math.max(1, ...availableActuals.map(Math.abs));
   return (
-    <div className="chart-content bar-chart-wrap">
-      <div className="analytics-fleet-rows">
-        {data.length ? data.slice(0, 8).map((item) => (
-          <div className="analytics-fleet-row" key={item.label}>
-            <strong>{item.label}</strong>
-            <div className="analytics-fleet-track" title={item.actual == null ? "Actual delay unavailable" : `${item.actual > 0 ? "+" : ""}${item.actual} min actual delay`}>
-              {item.actual != null && <i style={{ width: `${Math.max(3, (Math.abs(item.actual) / max) * 100)}%` }} />}
+    <div className="analytics-comparison-chart">
+      {data.length ? data.slice(0, 8).map((item) => (
+        <article className="analytics-comparison-row" key={item.label}>
+          <strong>{item.label}</strong>
+          <div className="analytics-comparison-series">
+            <div className="analytics-comparison-value">
+              <span>Scheduled</span>
+              <div className="analytics-comparison-track is-unavailable" aria-label="Scheduled delay unavailable" />
+              <b>{item.scheduled == null ? "Unavailable" : `${item.scheduled} min`}</b>
             </div>
-            <b>{item.actual == null ? "Unavailable" : `${item.actual > 0 ? "+" : ""}${item.actual} min`}</b>
+            <div className="analytics-comparison-value">
+              <span>Actual</span>
+              <div className="analytics-comparison-track" title={item.actual == null ? "Actual delay unavailable" : `${item.actual > 0 ? "+" : ""}${item.actual} min actual delay`}>
+                {item.actual != null && <i className={item.actual < 0 ? "is-early" : ""} style={{ width: `${Math.max(3, (Math.abs(item.actual) / max) * 100)}%` }} />}
+              </div>
+              <b>{item.actual == null ? "Unavailable" : `${item.actual > 0 ? "+" : ""}${item.actual} min`}</b>
+            </div>
           </div>
-        )) : <div className="analytics-chart-empty">No active service delay records are available.</div>}
-      </div>
-      <div className="chart-caption"><span><i className="key-scheduled" /> Scheduled baseline <b>Unavailable</b></span><span><i className="key-actual" /> Actual delay</span></div>
+        </article>
+      )) : (
+        <div className="analytics-chart-empty">No active service delay records are available.</div>
+      )}
+      <div className="analytics-chart-scale"><span>{availableActuals.length > 0 ? "0 min" : "Unavailable"}</span><span>Scale: highest returned actual delay</span><span>{availableActuals.length > 0 ? `${Math.max(...availableActuals.map(Math.abs))} min` : "Unavailable"}</span></div>
+      <div className="chart-caption"><span><i className="key-scheduled" /> Scheduled delay · unavailable from this API</span><span><i className="key-actual" /> Actual delay</span></div>
     </div>
   );
 }
@@ -400,7 +433,7 @@ function EtaScatterChart({ testMae, residualP90 }: { testMae: number | null; res
   return (
     <div className="chart-content scatter-wrap">
       <div className="validation-unavailable">
-        <span className="validation-icon">↗</span>
+        <span className="validation-icon"><FontAwesomeIcon icon={faBullseye} aria-hidden="true" /></span>
         <strong>Point-level validation data unavailable</strong>
         <span>The current API does not expose observed ETA-error samples or regression statistics.</span>
       </div>
@@ -540,12 +573,64 @@ function RefreshLiveButton({
   );
 }
 
+function FitRouteToBounds({ points, shouldLocate }: { points: [number, number][]; shouldLocate: boolean }) {
+  const map = useMap();
+  const handledPoints = useRef<[number, number][] | null>(null);
+
+  useEffect(() => {
+    if (points.length < 2 || points === handledPoints.current) return;
+    handledPoints.current = points;
+    if (shouldLocate) return;
+    map.fitBounds(new LatLngBounds(points), { padding: [32, 32], maxZoom: 7 });
+  }, [map, points, shouldLocate]);
+
+  return null;
+}
+
+function LocateLiveTrain({
+  locateKey,
+  lastLocatedKey,
+  latitude,
+  longitude,
+  onLocated,
+}: {
+  locateKey: number;
+  lastLocatedKey: number;
+  latitude?: number | null;
+  longitude?: number | null;
+  onLocated: (key: number) => void;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (locateKey === 0 || locateKey <= lastLocatedKey) return;
+    onLocated(locateKey);
+    if (
+      latitude == null ||
+      longitude == null ||
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude)
+    ) return;
+    map.setView([latitude, longitude], Math.max(map.getZoom(), 9), { animate: true });
+  }, [latitude, longitude, lastLocatedKey, locateKey, map, onLocated]);
+
+  return null;
+}
+
 function RouteMap({
   route,
   currentStationCode,
+  livePosition,
+  autoLocateKey,
+  lastMapLocateKey,
+  onMapLocated,
 }: {
   route: RouteResponse | null;
   currentStationCode?: string | null;
+  livePosition: LivePosition | null;
+  autoLocateKey: number;
+  lastMapLocateKey: number;
+  onMapLocated: (key: number) => void;
 }) {
   const mappedStations = useMemo(() => {
     const seen = new Set<string>();
@@ -576,20 +661,14 @@ function RouteMap({
   );
   const hasGeometry = points.length > 1;
   const currentMapIndex = mappedStations.findIndex(
-    (station) => station.station_code === currentStationCode,
+    (station) => station.station_code.trim().toUpperCase() === currentStationCode?.trim().toUpperCase(),
   );
 
-  function FocusRoute() {
-    const map = useMap();
-
-    useEffect(() => {
-      if (!hasGeometry) return;
-      const bounds = new LatLngBounds(points);
-      map.fitBounds(bounds, { padding: [32, 32], maxZoom: 7 });
-    }, [map, hasGeometry, points]);
-
-    return null;
-  }
+  const hasLiveCoordinates =
+    livePosition?.latitude != null &&
+    livePosition.longitude != null &&
+    Number.isFinite(livePosition.latitude) &&
+    Number.isFinite(livePosition.longitude);
 
   return (
     <div className="map-card">
@@ -612,7 +691,17 @@ function RouteMap({
             zoomControl={false}
             className="leaflet-map static-route-map"
           >
-            <FocusRoute />
+            <FitRouteToBounds
+              points={points}
+              shouldLocate={autoLocateKey > lastMapLocateKey && hasLiveCoordinates}
+            />
+            <LocateLiveTrain
+              locateKey={autoLocateKey}
+              lastLocatedKey={lastMapLocateKey}
+              latitude={livePosition?.latitude}
+              longitude={livePosition?.longitude}
+              onLocated={onMapLocated}
+            />
             <TileLayer
               attribution="&copy; OpenStreetMap contributors"
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -630,7 +719,7 @@ function RouteMap({
             {mappedStations.map((station, index) => {
               const isOrigin = index === 0;
               const isDestination = index === mappedStations.length - 1;
-              const isCurrent = station.station_code === currentStationCode;
+              const isCurrent = station.station_code.trim().toUpperCase() === currentStationCode?.trim().toUpperCase();
               const isJunction = /(?:jn|junction|central|terminal|cantt|city)/i.test(
                 `${station.station_name} ${station.station_code}`,
               );
@@ -653,6 +742,16 @@ function RouteMap({
                 </CircleMarker>
               );
             })}
+            {hasLiveCoordinates && (
+              <CircleMarker
+                center={[livePosition.latitude as number, livePosition.longitude as number]}
+                className="current-map-marker"
+                radius={9}
+                pathOptions={{ color: "#ffffff", fillColor: "#52c78a", fillOpacity: 1, weight: 4 }}
+              >
+                <Tooltip permanent>Train live position</Tooltip>
+              </CircleMarker>
+            )}
           </MapContainer>
         ) : (
           <div className="map-empty">
@@ -693,6 +792,12 @@ function LiveServicePage({
   displaySpeedKmph,
   currentStationName,
   delayReasonSummary,
+  autoLocateKey,
+  lastScheduleLocateKey,
+  onScheduleLocated,
+  lastMapLocateKey,
+  onMapLocated,
+  routeSegment,
   onRefresh,
   onAnalytics,
 }: {
@@ -709,22 +814,95 @@ function LiveServicePage({
   displaySpeedKmph: number | null;
   currentStationName: string;
   delayReasonSummary: string;
+  autoLocateKey: number;
+  lastScheduleLocateKey: number;
+  onScheduleLocated: (key: number) => void;
+  lastMapLocateKey: number;
+  onMapLocated: (key: number) => void;
+  routeSegment: DetailContext["routeSegment"];
   onRefresh: () => void;
   onAnalytics: () => void;
 }) {
   const [showAllHalts, setShowAllHalts] = useState(true);
   const [isJourneyExpanded, setIsJourneyExpanded] = useState(false);
-  const stations = useMemo(() => {
-    const seen = new Set<string>();
-    return (route?.stations ?? []).filter((station) => {
-      if (seen.has(station.station_code)) return false;
-      seen.add(station.station_code);
-      return true;
-    });
-  }, [route?.stations]);
-  const matchedCurrentIndex = livePosition?.current_station_code
-    ? stations.findIndex((station) => station.station_code === livePosition.current_station_code)
+  const stationElements = useRef(new Map<string, HTMLElement>());
+  const allStations = useMemo(() => route?.stations ?? [], [route?.stations]);
+  const routeSegmentBounds = useMemo(() => {
+    if (!routeSegment) return null;
+    const fromCode = routeSegment.fromStationCode.trim().toUpperCase();
+    const toCode = routeSegment.toStationCode.trim().toUpperCase();
+    const startIndex = allStations.findIndex(
+      (station) => station.station_code.trim().toUpperCase() === fromCode,
+    );
+    const endIndex = startIndex < 0
+      ? -1
+      : allStations.findIndex(
+          (station, index) =>
+            index >= startIndex && station.station_code.trim().toUpperCase() === toCode,
+        );
+    return { startIndex, endIndex };
+  }, [allStations, routeSegment]);
+  const liveStationCode = livePosition?.current_station_code?.trim().toUpperCase() ?? "";
+  const liveStationRouteIndex = liveStationCode
+    ? allStations.findIndex(
+        (station) => station.station_code.trim().toUpperCase() === liveStationCode,
+      )
     : -1;
+  const routeSegmentUnavailable = Boolean(
+    route &&
+    routeSegment &&
+    (!routeSegmentBounds ||
+      routeSegmentBounds.startIndex < 0 ||
+      routeSegmentBounds.endIndex < routeSegmentBounds.startIndex),
+  );
+  const displayedRange = useMemo(() => {
+    if (!routeSegment) return null;
+    if (routeSegmentUnavailable || !routeSegmentBounds) return null;
+    const expanded =
+      liveStationRouteIndex >= 0 &&
+      (liveStationRouteIndex < routeSegmentBounds.startIndex ||
+        liveStationRouteIndex > routeSegmentBounds.endIndex);
+    return {
+      startIndex: expanded
+        ? Math.min(routeSegmentBounds.startIndex, liveStationRouteIndex)
+        : routeSegmentBounds.startIndex,
+      endIndex: expanded
+        ? Math.max(routeSegmentBounds.endIndex, liveStationRouteIndex)
+        : routeSegmentBounds.endIndex,
+      expanded,
+    };
+  }, [liveStationRouteIndex, routeSegment, routeSegmentBounds, routeSegmentUnavailable]);
+  const expandedToCurrentLocation = displayedRange?.expanded ?? false;
+  const stations = useMemo(() => {
+    if (!routeSegment) return allStations;
+    if (routeSegmentUnavailable || !displayedRange) return [];
+    return allStations.slice(
+      displayedRange.startIndex,
+      displayedRange.endIndex + 1,
+    );
+  }, [allStations, displayedRange, routeSegment, routeSegmentUnavailable]);
+  const routeForDisplay = useMemo<RouteResponse | null>(() => {
+    if (!routeSegment) return route;
+    if (!route || routeSegmentUnavailable) {
+      return route ? { ...route, stations: [], segments: [] } : null;
+    }
+    const stationCodes = new Set(stations.map((station) => station.station_code));
+    return {
+      ...route,
+      stations,
+      segments: route.segments.filter(
+        (segment) =>
+          stationCodes.has(segment.from_station_code) &&
+          stationCodes.has(segment.to_station_code),
+      ),
+    };
+  }, [route, routeSegment, routeSegmentUnavailable, stations]);
+  const matchedCurrentIndex = livePosition?.current_station_code
+    ? stations.findIndex(
+        (station) => station.station_code.trim().toUpperCase() === liveStationCode,
+      )
+    : -1;
+  const liveStation = liveStationRouteIndex >= 0 ? allStations[liveStationRouteIndex] : null;
   const currentIndex = matchedCurrentIndex;
   const isMajorStation = (station: Station, index: number) =>
     station.is_halt ||
@@ -753,7 +931,15 @@ function LiveServicePage({
     { label: "Cumulative delay", value: delay?.cumulative_delay_minutes },
   ].filter((item): item is { label: string; value: number } => item.value != null);
   const destinationStation = stations[stations.length - 1];
-  const predictedDestination = prediction?.predicted_arrival ?? null;
+  const fullDestinationStation = allStations[allStations.length - 1];
+  const predictedDestination = destinationStation
+    ? forecast.find((entry) => entry.station_code === destinationStation.station_code)?.predicted_arrival ??
+      (destinationStation.station_code === fullDestinationStation?.station_code
+        ? prediction?.predicted_arrival ?? null
+        : null)
+    : null;
+  const hasFullRouteDestination =
+    !routeSegment || destinationStation?.station_code === fullDestinationStation?.station_code;
   const currentStationCode = livePosition?.current_station_code ?? (currentIndex >= 0 ? stations[currentIndex]?.station_code : null);
   const previousStationCode = livePosition?.previous_station_code ?? (currentIndex > 0 ? stations[currentIndex - 1]?.station_code : null);
   const nextStationCode = livePosition?.next_station_code ?? (currentIndex >= 0 ? stations[currentIndex + 1]?.station_code : null);
@@ -764,7 +950,7 @@ function LiveServicePage({
   function predictedTime(station: Station) {
     const forecastEntry = forecast.find((entry) => entry.station_code === station.station_code);
     if (forecastEntry?.predicted_arrival) return forecastEntry.predicted_arrival;
-    if (station.station_code === destinationStation?.station_code && prediction?.predicted_arrival) {
+    if (station.station_code === fullDestinationStation?.station_code && prediction?.predicted_arrival) {
       return prediction.predicted_arrival;
     }
     return null;
@@ -772,7 +958,7 @@ function LiveServicePage({
 
   function predictionLabel(station: Station) {
     const entry = forecast.find((item) => item.station_code === station.station_code);
-    const hasPrediction = Boolean(entry?.predicted_arrival) || (station.station_code === destinationStation?.station_code && Boolean(prediction?.predicted_arrival));
+    const hasPrediction = Boolean(entry?.predicted_arrival) || (station.station_code === fullDestinationStation?.station_code && Boolean(prediction?.predicted_arrival));
     if (!hasPrediction) return "Unavailable";
     return entry?.is_fallback || prediction?.is_fallback ? "Fallback ETA" : "AI Predicted";
   }
@@ -797,16 +983,45 @@ function LiveServicePage({
     setIsJourneyExpanded(false);
   }, [route?.train_number]);
 
+  useEffect(() => {
+    if (autoLocateKey === 0 || autoLocateKey <= lastScheduleLocateKey) return;
+    onScheduleLocated(autoLocateKey);
+    if (!liveStationCode) return;
+    stationElements.current
+      .get(liveStationCode)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [
+    autoLocateKey,
+    lastScheduleLocateKey,
+    liveStationCode,
+    onScheduleLocated,
+  ]);
+
   return (
     <section className="live-service-page">
       <div className="live-service-header">
         <div>
           <div className="breadcrumb">Train Search / Live Service</div>
           <h1>{train?.train_number ?? route?.train_number ?? trainNumber} · {train?.name ?? "Train details unavailable"}</h1>
-          <p>{train?.source_station ?? stations[0]?.station_name ?? "Unavailable"} <b>→</b> {train?.destination_station ?? destinationStation?.station_name ?? "Unavailable"} <span className="service-tag">{train?.train_type ?? "Live service"}</span></p>
+          <p>{routeSegment ? stations[0]?.station_name ?? routeSegment.fromStationCode : train?.source_station ?? stations[0]?.station_name ?? "Unavailable"} <b>→</b> {routeSegment ? destinationStation?.station_name ?? routeSegment.toStationCode : train?.destination_station ?? destinationStation?.station_name ?? "Unavailable"} <span className="service-tag">{train?.train_type ?? "Live service"}</span></p>
         </div>
         <div className="live-service-actions"><RefreshLiveButton refreshing={refreshing} refreshError={refreshError} onRefresh={onRefresh} showLiveBadge={Boolean(livePosition)} /></div>
       </div>
+      <button
+        className={`floating-live-refresh${refreshing ? " is-refreshing" : ""}${refreshError ? " is-error" : ""}`}
+        type="button"
+        aria-label={refreshError ? `Refresh Live failed: ${refreshError}` : "Refresh Live"}
+        aria-busy={refreshing}
+        disabled={refreshing}
+        title={refreshError || "Refresh live train data"}
+        onClick={onRefresh}
+      >
+        <span className="floating-live-refresh-icon" aria-hidden="true">
+          <FontAwesomeIcon icon={faRotate} />
+        </span>
+        <span>Refresh Live</span>
+        <span className="refresh-live-badge"><i />LIVE</span>
+      </button>
 
       <div className="prediction-banner">
         <div><span className="prediction-label">{prediction?.is_fallback ? "Fallback ETA" : "AI Predicted arrival"}</span><strong>{formatTime(predictedDestination)}</strong><small>{prediction ? prediction.is_fallback ? "Route/speed fallback" : "ML ETA" : "Prediction unavailable"} · confidence {confidence == null ? "Unavailable" : `${confidence}%`}</small></div>
@@ -830,7 +1045,7 @@ function LiveServicePage({
 
       <div className="live-metrics-strip">
         <article><span>Current delay</span><strong className={currentDelayTone}>{currentDelayLabel}</strong><em>{delay?.fresh_delay_minutes == null ? "Fresh delay unavailable" : `${Math.round(delay.fresh_delay_minutes)} min fresh movement`}</em></article>
-        <article className="prediction-metric"><span>AI predicted delay</span><strong>{prediction?.predicted_delay_minutes != null ? `+${Math.round(prediction.predicted_delay_minutes)} min` : "Unavailable"}</strong><em>Model projection at destination</em></article>
+        <article className="prediction-metric"><span>AI predicted delay</span><strong>{hasFullRouteDestination && prediction?.predicted_delay_minutes != null ? `+${Math.round(prediction.predicted_delay_minutes)} min` : "Unavailable"}</strong><em>Model projection at destination</em></article>
         <article className="prediction-metric"><span>Destination ETA</span><strong>{formatTime(predictedDestination)}</strong><em>AI Predicted arrival</em></article>
         <article><span>Route progress</span><strong>{routeProgress}</strong><em>{currentIndex >= 0 && stations.length > 0 ? `${currentIndex + 1} of ${stations.length} stations` : "Live route progress unavailable"}</em></article>
         <article><span>Confidence</span><strong className="confidence-value">{confidence == null ? "Unavailable" : `${confidence}%`}</strong><em>{delay?.confidence_level ?? (prediction ? "Prediction confidence" : "Unavailable")}</em></article>
@@ -856,9 +1071,29 @@ function LiveServicePage({
             <span><i className="legend-upcoming" />Upcoming</span>
           </div>
         </header>
+        <div className="schedule-live-location" role="status">
+          <span className="schedule-live-location-label">TRAIN CURRENT LOCATION</span>
+          {liveStation ? (
+            <strong>{liveStation.station_code} — {liveStation.station_name} <i>LIVE</i></strong>
+          ) : liveStationCode ? (
+            <strong>{liveStationCode} — Not present in returned route data</strong>
+          ) : (
+            <strong>Current location unavailable.</strong>
+          )}
+          {expandedToCurrentLocation && <small>Expanded to current location</small>}
+        </div>
         <div className="station-timeline">
-          {visibleStations.map((station) => {
+          {routeSegmentUnavailable ? (
+            <p role="alert">Route not available for this station pair</p>
+          ) : visibleStations.map((station) => {
             const stationIndex = stations.indexOf(station);
+            const routeIndex = (displayedRange?.startIndex ?? 0) + stationIndex;
+            const isRouteFrom = Boolean(
+              routeSegment && routeSegmentBounds && routeIndex === routeSegmentBounds.startIndex,
+            );
+            const isRouteTo = Boolean(
+              routeSegment && routeSegmentBounds && routeIndex === routeSegmentBounds.endIndex,
+            );
             const stationDelay = station.arrival_delay_minutes ?? station.departure_delay_minutes ?? (hasReportedCurrentDelay ? currentDelay : null);
             const state = stationState(stationIndex);
             const isCurrent = stationIndex === matchedCurrentIndex && matchedCurrentIndex >= 0;
@@ -878,17 +1113,26 @@ function LiveServicePage({
                   )}
                   {isCurrent && <span className="station-live-now">LIVE NOW</span>}
                 </div>
-                <article className={`station-row station-card ${state} ${isMajorStation(station, stationIndex) ? "major-station" : "intermediate-halt"}`}>
+                <article
+                  ref={(element) => {
+                    const stationCode = station.station_code.trim().toUpperCase();
+                    if (element) stationElements.current.set(stationCode, element);
+                    else stationElements.current.delete(stationCode);
+                  }}
+                  className={`station-row station-card ${state} ${isMajorStation(station, stationIndex) ? "major-station" : "intermediate-halt"}`}
+                >
                   <div className="station-identity">
                     <span className="station-card-icon" aria-hidden="true">
                       <svg viewBox="0 0 20 20" fill="none"><path d="M6 3.5h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z" /><path d="M5 9h10M7 6.5h.1m5.8 0h.1M7 14.5l-1.5 2m7-2 1.5 2" /></svg>
                     </span>
                     <div className="station-name">
                       <strong>{station.station_name}</strong>
-                      <span className="station-code-platform"><b>{station.station_code}</b><i />Platform {station.platform_no ?? "—"}</span>
+                      <span className="station-code-platform"><b>{station.station_code}</b>Platform {station.platform_no ?? "—"}</span>
                       <span className="station-ai-reason">AI evidence · {delay?.reason ?? "Unavailable"}</span>
                     </div>
                     <span className={`station-state-badge ${state}`}>
+                      {isRouteFrom && <b className="station-route-boundary">FROM</b>}
+                      {isRouteTo && <b className="station-route-boundary">TO</b>}
                       {isCurrent && <i className="station-live-indicator" />}{statusLabel}
                     </span>
                   </div>
@@ -951,7 +1195,7 @@ function LiveServicePage({
         </div>
       </section>
 
-      <section className="service-map-large" aria-label="Live map"><MapErrorBoundary key={`large-${route?.train_number ?? "route-map"}`}><RouteMap route={route} currentStationCode={livePosition?.current_station_code} /></MapErrorBoundary></section>
+      <section className="service-map-large" aria-label="Live map"><MapErrorBoundary key={`large-${route?.train_number ?? "route-map"}`}><RouteMap route={routeForDisplay} currentStationCode={livePosition?.current_station_code} livePosition={livePosition} autoLocateKey={autoLocateKey} lastMapLocateKey={lastMapLocateKey} onMapLocated={onMapLocated} /></MapErrorBoundary></section>
     </section>
   );
 }
@@ -964,6 +1208,8 @@ function PremiumHomePage({
   suggestions,
   stationSearching,
   stationSearchError,
+  stationNotFound,
+  stationCodeExamples,
   onFromChange,
   onToChange,
   onFromSelect,
@@ -981,6 +1227,8 @@ function PremiumHomePage({
   suggestions: StationOption[];
   stationSearching: boolean;
   stationSearchError: string;
+  stationNotFound: boolean;
+  stationCodeExamples: string[];
   onFromChange: (value: string) => void;
   onToChange: (value: string) => void;
   onFromSelect: (station: StationOption) => void;
@@ -1010,9 +1258,9 @@ function PremiumHomePage({
         <div className="premium-search-shell">
           <div className="premium-search-top"><span>Journey finder</span><small>Search trains, stations, and live routes</small></div>
           <div className="premium-search-grid premium-station-search-grid">
-            {(["from", "to"] as const).map((field) => <label className="premium-search-field" key={field}><span>{field === "from" ? "From station" : "To station"}</span><div className="premium-input-wrap"><i>{field === "from" ? "●" : "◉"}</i><input value={stationInput(field)} onFocus={() => onFieldFocus(field)} onBlur={onFieldBlur} onChange={(event) => field === "from" ? onFromChange(event.target.value) : onToChange(event.target.value)} placeholder="Search station name or code" /></div>{activeField === field && (suggestions.length > 0 || stationSearching || stationSearchError) && <div className="premium-suggestions">{stationSearching && <div role="status">Searching live stations...</div>}{!stationSearching && stationSearchError && <div role="status">{stationSearchError}</div>}{suggestions.map((station) => <button type="button" key={station.station_code} onMouseDown={(event) => event.preventDefault()} onClick={() => field === "from" ? onFromSelect(station) : onToSelect(station)}><strong>{station.station_name}</strong><span>{station.station_code}</span></button>)}</div>}</label>)}
-            <label className="premium-search-field date-field"><span>Date</span><div className="premium-input-wrap"><i>▣</i><input value="Today · 24 Sep 2026" readOnly /></div></label>
-            <button className="premium-search-button" disabled={searching || (!fromStation.trim() && !toStation.trim())} onClick={onSearch}>{searching ? <><i className="button-spinner" /> Searching...</> : <>Search Trains <b>→</b></>}</button>
+            {(["from", "to"] as const).map((field) => <label className="premium-search-field" key={field}><span>{field === "from" ? "From station" : "To station"}</span><div className="premium-input-wrap"><i><FontAwesomeIcon className="home-fa-icon" icon={faLocationDot} aria-hidden="true" /></i><input value={stationInput(field)} onFocus={() => onFieldFocus(field)} onBlur={onFieldBlur} onChange={(event) => field === "from" ? onFromChange(event.target.value) : onToChange(event.target.value)} placeholder="Search station name or code" /></div>{activeField === field && (suggestions.length > 0 || stationSearching || stationSearchError || stationNotFound) && <div className="premium-suggestions">{stationSearching && <div role="status">Searching live stations...</div>}{!stationSearching && stationNotFound && <div className="station-not-found" role="status"><strong>Station not found</strong><span>Try searching with the station code.</span>{stationCodeExamples.length > 0 && <small>Try station code: {stationCodeExamples.join(", ")}</small>}<small>Search using the official station code for better results.</small></div>}{!stationSearching && !stationNotFound && stationSearchError && <div role="alert">{stationSearchError}</div>}{suggestions.map((station) => <button type="button" key={station.station_code} onMouseDown={(event) => event.preventDefault()} onClick={() => field === "from" ? onFromSelect(station) : onToSelect(station)}><strong>{station.station_name}</strong><span>{station.station_code}</span></button>)}</div>}</label>)}
+            <label className="premium-search-field date-field"><span>Date</span><div className="premium-input-wrap"><i><FontAwesomeIcon className="home-fa-icon" icon={faCalendarDays} aria-hidden="true" /></i><input value="Today · 24 Sep 2026" readOnly /></div></label>
+            <button className="premium-search-button" disabled={searching || (!fromStation.trim() && !toStation.trim())} onClick={onSearch}>{searching ? <><i className="button-spinner" /> Searching...</> : <><FontAwesomeIcon className="home-fa-icon" icon={faMagnifyingGlass} aria-hidden="true" /> Search Trains</>}</button>
           </div>
           <div className="premium-search-foot"><span><i /> Live routes update on request</span><span>Search by station name or code</span></div>
         </div>
@@ -1020,13 +1268,13 @@ function PremiumHomePage({
       </div>
 
       <div className="premium-preview-wrap">
-        <div className="premium-section-heading"><div><span className="premium-eyebrow dark"><i /> Live preview</span><h2>One clear view of your journey.</h2></div><button onClick={() => onTrain("20801")}>Open live service →</button></div>
-        <article className="eta-preview-card"><div className="preview-train"><div className="preview-train-icon">↗</div><div><span>20801 · Superfast</span><strong>Magadh Express</strong><small>New Delhi <b>→</b> Patna</small></div><em><i /> LIVE</em></div><div className="preview-station"><span>Currently at</span><strong>DDU</strong><small>Mughalsarai Junction</small></div><div className="preview-station"><span>Next station</span><strong>PNBE</strong><small>Patna Junction</small></div><div className="preview-delay"><span>Current delay</span><strong>+08 <small>min</small></strong><small>Congestion detected</small></div><div className="preview-eta"><span>AI Predicted ETA</span><strong>18:40</strong><small>Confidence <b>86%</b></small></div></article>
+        <div className="premium-section-heading"><div><span className="premium-eyebrow dark"><i /> Live preview</span><h2>One clear view of your journey.</h2></div><button onClick={() => onTrain("20801")}>Open live service <FontAwesomeIcon className="home-fa-icon" icon={faArrowRight} aria-hidden="true" /></button></div>
+        <article className="eta-preview-card"><div className="preview-train"><div className="preview-train-icon"><FontAwesomeIcon className="home-fa-icon" icon={faTrain} aria-hidden="true" /></div><div><span>20801 · Superfast</span><strong>Magadh Express</strong><small>New Delhi <b>→</b> Patna</small></div><em><FontAwesomeIcon className="home-live-status-icon" icon={faCircle} aria-hidden="true" /> LIVE</em></div><div className="preview-station"><span>Currently at</span><strong>DDU</strong><small>Mughalsarai Junction</small></div><div className="preview-station"><span>Next station</span><strong>PNBE</strong><small>Patna Junction</small></div><div className="preview-delay"><span>Current delay</span><strong>+08 <small>min</small></strong><small>Congestion detected</small></div><div className="preview-eta"><span>AI Predicted ETA</span><strong>18:40</strong><small>Confidence <b>86%</b></small></div></article>
       </div>
 
       <div className="premium-section eta-visual-section"><div className="premium-section-heading"><div><span className="premium-eyebrow dark"><i /> Prediction lens</span><h2>See the journey ahead.</h2></div><span className="eta-visual-status"><i /> Model confidence 86%</span></div><div className="eta-visual"><div className="eta-track"><span className="eta-point scheduled"><i /><b>17:58</b><small>Scheduled ETA</small></span><span className="eta-point current"><i /><b>18:17</b><small>Current ETA</small></span><span className="eta-point predicted"><i /><b>18:40</b><small>AI Predicted ETA</small></span></div><div className="eta-route-line"><span /><i /><b>+23 min recovered from live speed + route evidence</b></div></div></div>
 
-      <div className="premium-section corridor-section"><div className="premium-section-heading"><div><span className="premium-eyebrow dark"><i /> Network pulse</span><h2>Live Railway Corridors</h2><p>Know where trains are moving and where time is building across the network.</p></div><button onClick={onCorridors}>Explore network →</button></div><div className="premium-corridor-grid">{corridors.map(([from, to, count, active, delayValue, status, color]) => <article key={`${from}-${to}`}><div className="corridor-card-top"><span style={{ background: color }} /><small>{status}</small></div><h3>{from} <b>→</b> {to}</h3><div className="corridor-card-stats"><span><strong>{count}</strong> trains</span><span><strong>{active}</strong> active now</span><span><strong>{delayValue}</strong> avg delay</span></div><button onClick={onCorridors}>View corridor <b>↗</b></button></article>)}</div></div>
+      <div className="premium-section corridor-section"><div className="premium-section-heading"><div><span className="premium-eyebrow dark"><i /> Network pulse</span><h2>Live Railway Corridors</h2><p>Know where trains are moving and where time is building across the network.</p></div><button onClick={onCorridors}>Explore network <FontAwesomeIcon className="home-fa-icon" icon={faArrowRight} aria-hidden="true" /></button></div><div className="premium-corridor-grid">{corridors.map(([from, to, count, active, delayValue, status, color]) => <article key={`${from}-${to}`}><div className="corridor-card-top"><span style={{ background: color }} /><small>{status}</small></div><h3>{from} <FontAwesomeIcon className="home-fa-icon home-route-icon" icon={faRoute} aria-hidden="true" /> {to}</h3><div className="corridor-card-stats"><span><strong>{count}</strong> trains</span><span><strong>{active}</strong> active now</span><span><strong>{delayValue}</strong> avg delay</span></div><button onClick={onCorridors}>View corridor <FontAwesomeIcon className="home-fa-icon" icon={faRoute} aria-hidden="true" /></button></article>)}</div></div>
 
       <div className="premium-stats"><div><span>Live trains</span><strong>24</strong><small>tracking now</small></div><div><span>Delayed trains</span><strong>05</strong><small>needs attention</small></div><div><span>Stations covered</span><strong>102</strong><small>across network</small></div><div><span>Active corridors</span><strong>12</strong><small>live routes</small></div><div><span>ETA predictions</span><strong>1,284</strong><small>generated today</small></div></div>
     </section>
@@ -1552,6 +1800,34 @@ function BackButton({ label, onBack }: { label: string; onBack: () => void }) {
   );
 }
 
+function RequestProcessingModal() {
+  const isProcessingRequestVisible = useSyncExternalStore(
+    subscribeToApiRequests,
+    getProcessingRequestVisible,
+    getProcessingRequestVisible,
+  );
+
+  if (!isProcessingRequestVisible) return null;
+
+  return (
+    <div className="request-processing-notice">
+      <section
+        className="request-processing-modal"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        aria-busy="true"
+      >
+        <span className="request-processing-icon" aria-hidden="true">
+          <FontAwesomeIcon icon={faSpinner} />
+        </span>
+        <h2>Working on your request</h2>
+        <p>We're fetching the latest information. Please be patient.</p>
+      </section>
+    </div>
+  );
+}
+
 function App() {
   const [page, setPageState] = useState<Page>("home");
   const [detailContext, setDetailContext] = useState<DetailContext | null>(null);
@@ -1571,8 +1847,11 @@ function App() {
   const [homeFromStationCode, setHomeFromStationCode] = useState("");
   const [homeToStationCode, setHomeToStationCode] = useState("");
   const [stationOptions, setStationOptions] = useState<StationOption[]>([]);
+  const [stationCodeExamples, setStationCodeExamples] = useState<string[]>([]);
   const [stationSearchLoading, setStationSearchLoading] = useState(false);
   const [stationSearchError, setStationSearchError] = useState("");
+  const [stationNotFound, setStationNotFound] = useState(false);
+  const [stationSearchField, setStationSearchField] = useState<"from" | "to" | null>(null);
   const [activeHomeField, setActiveHomeField] = useState<"from" | "to" | null>(null);
   const [routeSearchResults, setRouteSearchResults] = useState<TrainSearchResult[]>([]);
   const [stationSearchActive, setStationSearchActive] = useState(false);
@@ -1587,6 +1866,9 @@ function App() {
   const [prediction, setPrediction] = useState<Prediction | null>(null);
   const [forecast, setForecast] = useState<ForecastEntry[]>([]);
   const [livePosition, setLivePosition] = useState<LivePosition | null>(null);
+  const [autoLocateKey, setAutoLocateKey] = useState(0);
+  const lastScheduleLocateKey = useRef(0);
+  const lastMapLocateKey = useRef(0);
   const [analyticsSummary, setAnalyticsSummary] = useState<AnalyticsSummary | null>(null);
   const [analyticsRefreshing, setAnalyticsRefreshing] = useState(false);
   const [analyticsLastUpdated, setAnalyticsLastUpdated] = useState<string | null>(null);
@@ -1609,6 +1891,13 @@ function App() {
   const routeSearchInFlight = useRef(false);
   const refreshRequestInFlight = useRef(false);
   const savedSearchResultsRef = useRef<TrainSearchResult[]>([]);
+
+  const markScheduleLocated = useCallback((key: number) => {
+    lastScheduleLocateKey.current = key;
+  }, []);
+  const markMapLocated = useCallback((key: number) => {
+    lastMapLocateKey.current = key;
+  }, []);
 
   function setPage(nextPage: Page, nextDetailContext: DetailContext | null = null) {
     if (nextPage === page && !nextDetailContext) return;
@@ -1702,15 +1991,18 @@ function App() {
     );
   }
 
-  function requestStationSuggestions(value: string) {
+  function requestStationSuggestions(value: string, field: "from" | "to") {
     const query = value.trim();
+    setStationSearchField(field);
     if (stationSearchRequest.current?.query === query && query) return;
     stationSearchRequest.current?.controller.abort();
     stationSearchRequest.current = null;
     stationSearchRequestId.current += 1;
     const requestId = stationSearchRequestId.current;
     if (stationSearchTimer.current != null) window.clearTimeout(stationSearchTimer.current);
+    setStationSearchLoading(false);
     setStationSearchError("");
+    setStationNotFound(false);
     setStationOptions([]);
     if (!query) {
       setStationSearchLoading(false);
@@ -1719,13 +2011,19 @@ function App() {
 
     const controller = new AbortController();
     stationSearchRequest.current = { query, controller };
-    setStationSearchLoading(true);
     stationSearchTimer.current = window.setTimeout(() => {
+      setStationSearchLoading(true);
       void api.searchStations(query, controller.signal)
         .then((stations) => {
           if (requestId !== stationSearchRequestId.current) return;
           setStationOptions(stations);
-          if (stations.length === 0) setStationSearchError(`No stations found for "${query}".`);
+          setStationCodeExamples((current) => [
+            ...new Set([
+              ...stations.map((station) => station.station_code.trim().toUpperCase()),
+              ...current,
+            ].filter(Boolean)),
+          ].slice(0, 3));
+          setStationNotFound(stations.length === 0);
         })
         .catch((searchError) => {
           if (controller.signal.aborted || requestId !== stationSearchRequestId.current) return;
@@ -1793,7 +2091,7 @@ function App() {
     }
   }, [selectedNumber]);
 
-  const syncTrainNumber = useCallback(async (requestedTrainNumber = selectedNumber) => {
+  const syncTrainNumber = useCallback(async (requestedTrainNumber = selectedNumber, autoLocate = false) => {
     const trainNumber = requestedTrainNumber.trim();
     if (!trainNumber || refreshRequestInFlight.current) return;
     refreshRequestInFlight.current = true;
@@ -1808,6 +2106,7 @@ function App() {
       const loaded = await loadBackend(syncedTrainNumber);
       if (loaded) {
         setLastSuccessfulRefreshAt(new Date().toISOString());
+        if (autoLocate) setAutoLocateKey((key) => key + 1);
       } else {
         const message = backendLoadError.current ?? "Live train details could not be loaded. Last updated time was not changed.";
         setRefreshError(message);
@@ -1893,34 +2192,7 @@ function App() {
     });
   }, [routeResultDeparture, routeResultQuery, routeResultSort, routeResultStatus, routeSearchResults]);
 
-  const savedPosition = useMemo<LivePosition | null>(() => {
-    if (!route?.stations.length) return null;
-
-    const actualIndex = route.stations.reduce(
-      (latestIndex, station, index) =>
-        station.actual_arrival || station.actual_departure
-          ? index
-          : latestIndex,
-      -1,
-    );
-    const currentIndex = actualIndex >= 0 ? actualIndex : 0;
-    const currentStation = route.stations[currentIndex];
-
-    return {
-      current_station_code: currentStation.station_code,
-      previous_station_code:
-        route.stations[currentIndex - 1]?.station_code ?? null,
-      next_station_code: route.stations[currentIndex + 1]?.station_code ?? null,
-      current_speed_kmph: null,
-      updated_at:
-        currentStation.actual_arrival ??
-        currentStation.actual_departure ??
-        currentStation.scheduled_arrival ??
-        currentStation.scheduled_departure,
-    };
-  }, [route]);
-
-  const displayPosition = livePosition ?? savedPosition;
+  const displayPosition = livePosition;
   const liveStationIndex =
     route?.stations.findIndex(
       (station) => station.station_code === displayPosition?.current_station_code,
@@ -2058,9 +2330,6 @@ function App() {
     });
   }, [
     expandedStationCode,
-    displayPosition?.current_station_code,
-    displayPosition?.next_station_code,
-    displayPosition?.previous_station_code,
     route,
   ]);
 
@@ -2143,7 +2412,7 @@ function App() {
   async function refreshLiveData() {
     if (refreshing) return;
     try {
-      await syncTrainNumber();
+      await syncTrainNumber(selectedNumber, true);
     } catch (syncError) {
       setError(
         syncError instanceof Error
@@ -2322,7 +2591,7 @@ function App() {
     setPage("search", { parentPage: "live", label: "Back to Live Trains" });
     setLiveSearchLoading(true);
     try {
-      await syncTrainNumber(trainNumber);
+      await syncTrainNumber(trainNumber, true);
     } finally {
       setLiveSearchLoading(false);
     }
@@ -2334,15 +2603,17 @@ function App() {
         fromStation={homeFromStation}
         toStation={homeToStation}
         searching={homeSearchLoading}
-        activeField={activeHomeField}
+        activeField={activeHomeField ?? (stationNotFound ? stationSearchField : null)}
         suggestions={homeStationSuggestions}
         stationSearching={stationSearchLoading}
         stationSearchError={stationSearchError}
-        onFromChange={(value) => { setHomeFromStation(value); setHomeFromStationCode(""); requestStationSuggestions(value); }}
-        onToChange={(value) => { setHomeToStation(value); setHomeToStationCode(""); requestStationSuggestions(value); }}
-        onFromSelect={(station) => { setHomeFromStation(station.station_name); setHomeFromStationCode(station.station_code); requestStationSuggestions(""); setActiveHomeField(null); }}
-        onToSelect={(station) => { setHomeToStation(station.station_name); setHomeToStationCode(station.station_code); requestStationSuggestions(""); setActiveHomeField(null); }}
-        onFieldFocus={(field) => { setActiveHomeField(field); requestStationSuggestions(field === "from" ? homeFromStation : homeToStation); }}
+        stationNotFound={stationNotFound}
+        stationCodeExamples={stationCodeExamples}
+        onFromChange={(value) => { setHomeFromStation(value); setHomeFromStationCode(""); requestStationSuggestions(value, "from"); }}
+        onToChange={(value) => { setHomeToStation(value); setHomeToStationCode(""); requestStationSuggestions(value, "to"); }}
+        onFromSelect={(station) => { setHomeFromStation(station.station_name); setHomeFromStationCode(station.station_code); requestStationSuggestions("", "from"); setActiveHomeField(null); }}
+        onToSelect={(station) => { setHomeToStation(station.station_name); setHomeToStationCode(station.station_code); requestStationSuggestions("", "to"); setActiveHomeField(null); }}
+        onFieldFocus={(field) => { setActiveHomeField(field); requestStationSuggestions(field === "from" ? homeFromStation : homeToStation, field); }}
         onFieldBlur={() => window.setTimeout(() => {
           if (!document.activeElement?.closest(".premium-search-field")) {
             setActiveHomeField(null);
@@ -2359,7 +2630,7 @@ function App() {
         onTrain={(trainNumber) => {
           setSelectedNumber(trainNumber);
           setPage("search");
-          void syncTrainNumber(trainNumber);
+          void syncTrainNumber(trainNumber, true);
         }}
         onCorridors={() => setPage("corridors")}
       />
@@ -2502,7 +2773,7 @@ function App() {
                 onClick={() => {
                   setSelectedNumber("20801");
                   setPage("search");
-                  void syncTrainNumber("20801");
+                  void syncTrainNumber("20801", true);
                 }}
               >
                 <span className="route-photo route-delhi" />
@@ -2513,7 +2784,7 @@ function App() {
                 onClick={() => {
                   setSelectedNumber("13401");
                   setPage("search");
-                  void syncTrainNumber("13401");
+                  void syncTrainNumber("13401", true);
                 }}
               >
                 <span className="route-photo route-kolkata" />
@@ -2782,8 +3053,15 @@ function App() {
                             setSelectedNumber(train.train_number);
                             setRouteSearchResults([]);
                             setStationSearchActive(false);
-                            setPage("search", { parentPage: "search", label: "Back to Train Search" });
-                            void syncTrainNumber(train.train_number);
+                            setPage("search", {
+                              parentPage: "search",
+                              label: "Back to Train Search",
+                              routeSegment: {
+                                fromStationCode: homeFromStationCode,
+                                toStationCode: homeToStationCode,
+                              },
+                            });
+                            void syncTrainNumber(train.train_number, true);
                           }}
                         >
                           <span>View Live Train</span>
@@ -2886,6 +3164,12 @@ function App() {
         prediction={prediction}
         forecast={forecast}
         livePosition={displayPosition}
+        autoLocateKey={autoLocateKey}
+        lastScheduleLocateKey={lastScheduleLocateKey.current}
+        onScheduleLocated={markScheduleLocated}
+        lastMapLocateKey={lastMapLocateKey.current}
+        onMapLocated={markMapLocated}
+        routeSegment={detailContext?.routeSegment}
         refreshing={refreshing}
         refreshError={refreshError}
         lastUpdatedAt={lastSuccessfulRefreshAt}
@@ -3085,6 +3369,10 @@ function App() {
               <RouteMap
                 route={route}
                 currentStationCode={displayPosition?.current_station_code}
+                livePosition={displayPosition}
+                autoLocateKey={autoLocateKey}
+                lastMapLocateKey={lastMapLocateKey.current}
+                onMapLocated={markMapLocated}
               />
             </MapErrorBoundary>
             <div className="reason-card">
@@ -3122,7 +3410,7 @@ function App() {
         onOpenTrain={(trainNumber) => {
           setSelectedNumber(trainNumber);
           setPage("search", { parentPage: "live", label: "Back to Live Trains" });
-          void syncTrainNumber(trainNumber);
+          void syncTrainNumber(trainNumber, true);
         }}
       />
     );
@@ -3145,16 +3433,16 @@ function App() {
     const analyticsRows = analyticsSummary?.trains ?? [];
     const activeTrainCount = analyticsSummary?.active_trains ?? null;
     const totalNetworkDelay = analyticsSummary ? Math.round(analyticsSummary.total_delay_minutes) : null;
-    const averageNetworkDelay = activeTrainCount ? Math.round((totalNetworkDelay ?? 0) / activeTrainCount) : null;
     const confidence = delay?.confidence_score ?? prediction?.confidence_score ?? null;
     const confidencePercent = confidence == null ? null : Math.round(confidence * 100);
     const evidenceRows = analyticsRows.filter((item) => item.reason && !/no live data/i.test(item.reason));
+    const evidenceRecordCount = analyticsSummary ? evidenceRows.length : null;
     const reasonTotals = analyticsRows.reduce<Record<string, number>>((totals, item) => {
       const reason = item.reason?.trim();
       if (reason) totals[reason] = (totals[reason] ?? 0) + 1;
       return totals;
     }, {});
-    const chartColors = ["#0875c9", "#f28a2b", "#d85b55", "#55a995", "#8093a1"];
+    const chartColors = ["#2563eb", "#d97706", "#dc2626", "#16a34a", "#64748b"];
     const reasonData = Object.entries(reasonTotals)
       .sort((left, right) => right[1] - left[1])
       .map(([label, count], index) => ({
@@ -3164,56 +3452,51 @@ function App() {
       }));
     const reasonRecordTotal = reasonData.reduce((total, item) => total + item.count, 0);
     const comparisonData: DelayComparisonDatum[] = analyticsRows.map((item) => ({
-      label: item.train_number,
+      label: `${item.train_number} · ${item.train_name}`,
       scheduled: null,
       actual: Number.isFinite(item.delay_minutes) ? Math.round(item.delay_minutes) : null,
     }));
-    const topReason = Object.entries(reasonTotals).sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;
-    const selectedReason = delay?.reason && !/no live data/i.test(delay.reason) ? delay.reason : null;
-    const primaryReason = selectedReason ?? topReason;
     const testMaeValue = prediction?.evidence?.test_mae_minutes;
     const residualP90Value = prediction?.evidence?.validation_residual_p90_minutes;
     const testMae = typeof testMaeValue === "number" ? testMaeValue : null;
     const residualP90 = typeof residualP90Value === "number" ? residualP90Value : null;
+    const modelFactors = (prediction?.evidence?.factors ?? []).filter(
+      (factor) => typeof factor.feature === "string" && Number.isFinite(factor.importance),
+    );
+    const confidenceLevel = delay?.confidence_level?.toUpperCase() ?? "UNAVAILABLE";
+    const networkRoutes = analyticsRows
+      .filter((item) => item.source?.trim() && item.destination?.trim())
+      .slice(0, 10);
     const predictionStatus = prediction
       ? prediction.is_fallback ? "FALLBACK" : prediction.prediction_source?.toUpperCase() ?? "AVAILABLE"
       : "UNAVAILABLE";
     const signalRows = [
-      { name: "Live position", status: livePosition ? "Active" : "Unavailable", freshness: livePosition?.updated_at ? formatRelativeTime(livePosition.updated_at) : "Unavailable", healthy: Boolean(livePosition) },
-      { name: "Delay event", status: delay ? "Available" : "Unavailable", freshness: "Unavailable", healthy: false },
-      { name: "Segment speed", status: livePosition?.current_speed_kmph != null ? "Available" : "Unavailable", freshness: livePosition?.updated_at ? formatRelativeTime(livePosition.updated_at) : "Unavailable", healthy: false },
+      { name: "Live position", status: livePosition ? livePosition.status?.toUpperCase() ?? "AVAILABLE" : "Unavailable", freshness: livePosition?.updated_at ? formatRelativeTime(livePosition.updated_at) : "Unavailable", healthy: Boolean(livePosition) },
+      { name: "Delay event", status: delay ? "Available" : "Unavailable", freshness: "Unavailable", healthy: Boolean(delay) },
+      { name: "Segment speed", status: livePosition?.current_speed_kmph != null ? "Available" : "Unavailable", freshness: livePosition?.updated_at ? formatRelativeTime(livePosition.updated_at) : "Unavailable", healthy: livePosition?.current_speed_kmph != null },
       { name: "ETA prediction", status: prediction ? predictionStatus : "Unavailable", freshness: "Unavailable", healthy: Boolean(prediction && !prediction.is_fallback) },
     ];
-    const evidenceItems = [
-      { label: "Cumulative delay", value: delay?.cumulative_delay_minutes != null ? `${Math.round(delay.cumulative_delay_minutes)} min` : "Unavailable", detail: "Accumulated delay recorded for the selected train." },
-      { label: "Fresh delay", value: delay?.fresh_delay_minutes != null ? `${Math.round(delay.fresh_delay_minutes)} min` : "Unavailable", detail: "Most recent delay increment available from the delay summary." },
-      { label: "Current segment speed", value: livePosition?.current_speed_kmph != null ? `${Math.round(livePosition.current_speed_kmph)} km/h` : "Unavailable", detail: "Current speed reported by the live position response." },
-      { label: "Position freshness", value: livePosition?.updated_at ? formatRelativeTime(livePosition.updated_at) : "Unavailable", detail: livePosition?.updated_at ? `Position timestamp ${formatTime(livePosition.updated_at)}.` : "No live position timestamp is available." },
-    ];
-    const decisionStages = [
-      { label: "Live movement", status: livePosition ? "Available" : "Unavailable", detail: livePosition?.current_station_code ?? "—", ready: Boolean(livePosition) },
-      { label: "Signal processing", status: delay ? "Available" : "Unavailable", detail: delay?.reason?.replaceAll("_", " ") ?? "—", ready: Boolean(delay) },
-      { label: "Evidence weighting", status: prediction?.evidence?.factors?.length ? "Available" : "Unavailable", detail: prediction?.evidence?.factors?.length ? `${prediction.evidence.factors.length} model factors` : "—", ready: Boolean(prediction?.evidence?.factors?.length) },
-      { label: "Delay estimate", status: delay?.latest_delay_minutes != null ? "Available" : "Unavailable", detail: delay?.latest_delay_minutes != null ? `${Math.round(delay.latest_delay_minutes)} min` : "—", ready: delay?.latest_delay_minutes != null },
-      { label: "AI ETA decision", status: prediction?.predicted_arrival ? "Available" : "Unavailable", detail: prediction?.predicted_arrival ? formatTime(prediction.predicted_arrival) : "—", ready: Boolean(prediction?.predicted_arrival) },
-    ];
-    const explanation = delay?.evidence_summary || (primaryReason
-      ? `The most frequently reported reason in active service records is ${primaryReason.replaceAll("_", " ")}. Per-signal contribution data is unavailable.`
-      : "Delay explanation is unavailable because no reason or evidence summary was returned.");
+    const explanation = delay?.evidence_summary || prediction?.message || null;
 
     return (
       <section className="analytics-page delay-analytics-page">
         <header className="analytics-hero delay-analytics-hero">
-          <div>
-            <span className="section-kicker">Evidence layer / SIH operations view</span>
-            <h1>Delay Analytics</h1>
-            <p>Trace every delay score from live movement signals to an explainable ETA decision.</p>
-            <div className="analytics-subline">{selectedNumber ? `Train ${selectedNumber}` : "Network view"}<i />Active services<i />Refreshed {analyticsLastUpdated ? formatTime(analyticsLastUpdated) : "—"}</div>
+          <div className="analytics-title-group">
+            <span className="analytics-page-icon"><FontAwesomeIcon icon={faChartLine} aria-hidden="true" /></span>
+            <div>
+              <span className="section-kicker">Rail operations / explainable AI</span>
+              <h1>Delay Analytics</h1>
+              <p>AI-powered delay intelligence and explainable ETA decisions</p>
+            </div>
           </div>
           <div className="analytics-header-actions">
-            <span className={livePosition ? "analytics-network-status is-live" : "analytics-network-status"}><i />{livePosition ? "LIVE NETWORK" : analyticsSummary ? "NETWORK DATA" : "DATA UNAVAILABLE"}</span>
+            <span className={livePosition ? "analytics-network-status is-live" : "analytics-network-status"}>
+              <FontAwesomeIcon icon={faCircle} aria-hidden="true" />
+              {livePosition ? "LIVE NETWORK" : analyticsSummary ? "NETWORK DATA" : "DATA UNAVAILABLE"}
+            </span>
+            <span className="analytics-last-updated">Last updated <strong>{analyticsLastUpdated ? formatRelativeTime(analyticsLastUpdated) : "Unavailable"}</strong></span>
             <button className="analytics-refresh-button" type="button" onClick={() => void refreshAnalyticsData()} disabled={analyticsRefreshing}>
-              <svg className={analyticsRefreshing ? "is-spinning" : ""} viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M16.5 7.2A7 7 0 0 0 4.2 5.1L3 6.5m0 0V3.7m0 2.8h2.8M3.5 12.8a7 7 0 0 0 12.3 2.1l1.2-1.4m0 0v2.8m0-2.8h-2.8" /></svg>
+              <FontAwesomeIcon className={analyticsRefreshing ? "is-spinning" : ""} icon={faRotate} aria-hidden="true" />
               Refresh
             </button>
           </div>
@@ -3221,76 +3504,161 @@ function App() {
 
         <section className="analytics-kpis delay-analytics-kpis" aria-label="Executive metrics">
           <article className="analytics-kpi kpi-blue">
-            <div className="analytics-kpi-heading"><span className="analytics-kpi-icon"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 15.5h14M5 12l3-3 2 2 5-6" /><path d="M12.5 5H15v2.5" /></svg></span><span>Network delay index</span></div>
-            <strong>{averageNetworkDelay == null ? "—" : <>{averageNetworkDelay}<small> min</small></>}</strong>
-            <em>{activeTrainCount == null ? "Active service count unavailable" : `${activeTrainCount} active services`}</em>
-          </article>
-          <article className="analytics-kpi kpi-orange">
-            <div className="analytics-kpi-heading"><span className="analytics-kpi-icon"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.8 12.2 4l2.5-.1.8 2.3 1.8 1.7-.8 2.4.5 2.5-2.1 1.4-1.2 2.2-2.5-.4L9 17l-2.1-1.4-2.5.1-.8-2.3-1.8-1.7.8-2.4-.5-2.5 2.1-1.4 1.2-2.2 2.5.4z" /><path d="m6.8 10.2 2 2 4.5-4.5" /></svg></span><span>Confidence score</span></div>
-            <strong>{confidencePercent == null ? "—" : <>{confidencePercent}<small>%</small></>}</strong>
-            <em>{delay?.confidence_level ?? (prediction ? "Prediction confidence" : "Selected-train confidence unavailable")}</em>
+            <div className="analytics-kpi-heading"><span className="analytics-kpi-icon"><FontAwesomeIcon icon={faClock} aria-hidden="true" /></span><span>Network delay index</span></div>
+            <strong>{totalNetworkDelay == null ? "Unavailable" : <>{totalNetworkDelay}<small> min</small></>}</strong>
+            <em>{analyticsSummary ? "Total reported delay across active services" : "Network delay unavailable"}</em>
           </article>
           <article className="analytics-kpi kpi-green">
-            <div className="analytics-kpi-heading"><span className="analytics-kpi-icon"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 4.5h12v11H4zM7 2.8v3.4M13 2.8v3.4M7 9h6M7 12h4" /></svg></span><span>Evidence strength</span></div>
-            <strong>{analyticsSummary ? `${evidenceRows.length} / ${activeTrainCount ?? analyticsRows.length}` : "—"}</strong>
-            <em>Services with a reported delay reason</em>
+            <div className="analytics-kpi-heading"><span className="analytics-kpi-icon"><FontAwesomeIcon icon={faTrain} aria-hidden="true" /></span><span>Active services</span></div>
+            <strong>{activeTrainCount ?? "Unavailable"}</strong>
+            <em>{analyticsSummary ? "Active records returned by the backend" : "Active service count unavailable"}</em>
           </article>
-          <article className="analytics-kpi kpi-slate">
-            <div className="analytics-kpi-heading"><span className="analytics-kpi-icon"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5v4m0 7v4M2.5 10h4m7 0h4M4.7 4.7l2.8 2.8m5 5 2.8 2.8m0-10.6-2.8 2.8m-5 5-2.8 2.8" /><circle cx="10" cy="10" r="3" /></svg></span><span>Fallback status</span></div>
-            <strong>{prediction ? prediction.is_fallback ? "FALLBACK" : prediction.prediction_source?.toUpperCase() ?? "AVAILABLE" : "—"}</strong>
-            <em>{prediction ? prediction.is_fallback ? "Fallback prediction in use" : "Model prediction available" : "Prediction status unavailable"}</em>
+          <article className="analytics-kpi kpi-blue">
+            <div className="analytics-kpi-heading"><span className="analytics-kpi-icon"><FontAwesomeIcon icon={faShieldHalved} aria-hidden="true" /></span><span>Confidence score</span></div>
+            <strong>{confidencePercent == null ? "Unavailable" : <>{confidencePercent}<small>%</small></>}</strong>
+            <em><span className={`confidence-level confidence-${confidenceLevel.toLowerCase()}`}>{confidenceLevel}</span>{selectedNumber ? ` · Train ${selectedNumber}` : " · Selected-train confidence"}</em>
+          </article>
+          <article className="analytics-kpi kpi-amber">
+            <div className="analytics-kpi-heading"><span className="analytics-kpi-icon"><FontAwesomeIcon icon={faDatabase} aria-hidden="true" /></span><span>Evidence strength</span></div>
+            <strong>{evidenceRecordCount == null || activeTrainCount == null ? "Unavailable" : `${evidenceRecordCount} / ${activeTrainCount}`}</strong>
+            <em>{analyticsSummary ? "Services with a backend-reported delay reason" : "Reported evidence unavailable"}</em>
           </article>
         </section>
 
+        <section className="analytics-evidence-strip" aria-label="Live evidence status">
+          <div className="analytics-evidence-strip-title"><FontAwesomeIcon icon={faListCheck} aria-hidden="true" /><strong>Evidence status</strong></div>
+          <div className="analytics-evidence-strip-item"><i className={livePosition ? "is-ready" : ""} /><span><b>LIVE DATA</b><small>{livePosition?.current_station_code ? `Position at ${livePosition.current_station_code}` : "Unavailable"}</small></span></div>
+          <div className="analytics-evidence-strip-item"><i className={prediction && !prediction.is_fallback ? "is-ready" : ""} /><span><b>MODEL</b><small>{predictionStatus}</small></span></div>
+          <div className="analytics-evidence-strip-item"><i className={evidenceRecordCount != null && evidenceRecordCount > 0 ? "is-ready" : ""} /><span><b>EVIDENCE</b><small>{evidenceRecordCount == null || activeTrainCount == null ? "Unavailable" : `${evidenceRecordCount} / ${activeTrainCount} service reasons`}</small></span></div>
+          <div className="analytics-evidence-strip-item"><i className={prediction?.is_fallback ? "is-warning" : prediction && !prediction.is_fallback ? "is-ready" : ""} /><span><b>FALLBACK</b><small>{prediction ? prediction.is_fallback ? "Active" : "Not active" : "Unavailable"}</small></span></div>
+        </section>
+
         <section className="analytics-cause-grid" aria-label="Delay cause intelligence">
-          <article className="analytics-panel analytics-premium-panel analytics-donut-panel">
-            <div className="analytics-section-heading"><div><span className="panel-eyebrow">Delay cause intelligence</span><h2>Why delays happen</h2><p>Reported reasons across active service records.</p></div><span className="analytics-total-badge">{totalNetworkDelay == null ? "—" : `${totalNetworkDelay} min`}<small>network total</small></span></div>
-            <DonutChart data={reasonData} totalDelay={totalNetworkDelay} />
-          </article>
-          <article className="analytics-panel analytics-premium-panel analytics-contribution-panel">
-            <div className="analytics-section-heading"><div><span className="panel-eyebrow">Reason distribution</span><h2>Reported delay reasons</h2><p>Share of services by backend-reported reason.</p></div></div>
-            {reasonData.length ? <div className="analytics-reason-bars">{reasonData.map((item) => {
-              const percent = reasonRecordTotal ? Math.round((item.count / reasonRecordTotal) * 100) : 0;
-              return <div className="analytics-reason-row" key={item.label}><div className="analytics-reason-row-heading"><strong>{item.label}</strong><b>{percent}%</b></div><div className="analytics-reason-track"><i style={{ width: `${percent}%`, background: item.color }} /></div><small>{item.count} active service {item.count === 1 ? "record" : "records"} report this reason.</small></div>;
-            })}</div> : <div className="analytics-chart-empty">Reported reason data unavailable</div>}
+          <article className="analytics-panel analytics-premium-panel analytics-causes-panel">
+            <div className="analytics-section-heading">
+              <div><span className="panel-eyebrow">Delay cause intelligence</span><h2>Why delays happen</h2><p>Delay reasons returned for active services.</p></div>
+              <span className="analytics-total-badge">{totalNetworkDelay == null ? "Unavailable" : `${totalNetworkDelay} min`}<small>Total network delay</small></span>
+            </div>
+            <div className="analytics-causes-layout">
+              <DonutChart data={reasonData} totalDelay={totalNetworkDelay} />
+              {reasonData.length ? <div className="analytics-reason-bars">{reasonData.map((item) => {
+                const percent = reasonRecordTotal ? Math.round((item.count / reasonRecordTotal) * 100) : 0;
+                return <div className="analytics-reason-row" key={item.label}>
+                  <div className="analytics-reason-row-heading"><strong>{item.label}</strong><b>{percent}%</b></div>
+                  <div className="analytics-reason-track"><i style={{ width: `${percent}%`, background: item.color }} /></div>
+                  <small>{item.count} of {reasonRecordTotal} records report this reason.</small>
+                </div>;
+              })}</div> : <div className="analytics-chart-empty">Reported reason data unavailable</div>}
+            </div>
           </article>
         </section>
 
         <section className="analytics-secondary-grid">
           <article className="analytics-panel analytics-premium-panel analytics-fleet-panel">
-            <div className="analytics-section-heading"><div><span className="panel-eyebrow">Fleet comparison</span><h2>Scheduled vs actual delay</h2><p>Reported actual delay across active services.</p></div><span className="analytics-count-badge">{analyticsSummary ? `${analyticsRows.length} services` : "— services"}</span></div>
+            <div className="analytics-section-heading"><div><span className="panel-eyebrow">Service-level comparison</span><h2>Scheduled vs Actual Delay</h2><p>Service-level delay comparison from returned train records.</p></div><span className="analytics-count-badge">{analyticsSummary ? `${analyticsRows.length} services` : "Unavailable"}</span></div>
             <DelayBarChart data={comparisonData} />
           </article>
           <article className="analytics-panel analytics-premium-panel analytics-validation-panel">
-            <div className="analytics-section-heading"><div><span className="panel-eyebrow">Forecast validation</span><h2>ETA error vs actual delay</h2><p>Regression analysis between predicted ETA error and observed delay.</p></div><span className="analytics-r2-badge">R² <b>Unavailable</b></span></div>
+            <div className="analytics-section-heading"><div><span className="panel-eyebrow">Forecast validation</span><h2>Forecast Validation</h2><p>ETA error vs actual delay.</p></div><span className="analytics-r2-badge">R² <b>Unavailable</b></span></div>
             <EtaScatterChart testMae={testMae} residualP90={residualP90} />
           </article>
         </section>
 
-        <section className="analytics-explainability" id="analytics-evidence-trace">
-          <div className="analytics-explainability-header"><div><span className="panel-eyebrow">Explainability trace</span><h2>Evidence contribution</h2><p>Inspect the live values and model context available for this delay decision.</p></div><span className="analytics-contribution-note">Per-signal contribution % unavailable</span></div>
-          <div className="analytics-evidence-timeline">{evidenceItems.map((item, index) => <article className="analytics-evidence-item" key={item.label}>
-            <span className="analytics-evidence-index">0{index + 1}</span>
-            <div className="analytics-evidence-copy"><div className="analytics-evidence-title"><h3>{item.label}</h3><strong>—</strong></div><p>{item.detail}</p><div className="analytics-evidence-value"><span>Observed value</span><b>{item.value}</b></div><div className="analytics-evidence-track"><i /></div></div>
-          </article>)}</div>
-        </section>
-
-        <section className="analytics-decision-flow" aria-label="Decision trace">
-          <div className="analytics-section-heading"><div><span className="panel-eyebrow">Decision trace</span><h2>From movement to ETA</h2></div></div>
-          <div className="analytics-flow-nodes">{decisionStages.map((stage, index) => <Fragment key={stage.label}><article className={stage.ready ? "analytics-flow-node is-ready" : "analytics-flow-node"}><span className="analytics-flow-index">0{index + 1}</span><strong>{stage.label}</strong><small>{stage.status}</small><em>{stage.detail}</em></article>{index < decisionStages.length - 1 && <span className="analytics-flow-connector" aria-hidden="true" />}</Fragment>)}</div>
-        </section>
-
-        <section className="analytics-bottom-grid">
-          <article className="analytics-panel analytics-premium-panel analytics-signals-panel">
-            <div className="analytics-section-heading"><div><span className="panel-eyebrow">Live evidence</span><h2>Live signals</h2></div></div>
-            <div className="analytics-signal-table"><div className="analytics-signal-head"><span>Signal</span><span>Status</span><span>Freshness</span></div>{signalRows.map((signal) => <div className="analytics-signal-row" key={signal.name}><strong>{signal.name}</strong><span className={signal.healthy ? "signal-status is-healthy" : "signal-status"}><i />{signal.status}</span><small>{signal.freshness}</small></div>)}</div>
+        <section className="analytics-explainability-grid">
+          <article className="analytics-explainability analytics-premium-panel" id="analytics-evidence-trace">
+            <div className="analytics-section-heading">
+              <div><span className="panel-eyebrow">Explainability trace</span><h2>Evidence contributing to the current ETA decision</h2></div>
+              <FontAwesomeIcon className="analytics-heading-icon" icon={faListCheck} aria-hidden="true" />
+            </div>
+            <div className="analytics-evidence-timeline">
+              {modelFactors.length > 0 ? modelFactors.map((factor) => {
+                const factorLabel = factor.feature.replace(/^(numeric|categorical)__/, "").replaceAll("_", " ");
+                const importancePercent = Math.round(factor.importance * 100);
+                return (
+                  <details className="analytics-factor-row" key={factor.feature}>
+                    <summary>
+                      <span className="analytics-factor-icon"><FontAwesomeIcon icon={faDatabase} aria-hidden="true" /></span>
+                      <span className="analytics-factor-copy"><strong>{factorLabel}</strong><small>Model feature importance</small></span>
+                      <b>{importancePercent}%</b>
+                    </summary>
+                    <div className="analytics-factor-detail">
+                      <span>Feature returned by the prediction model</span>
+                      <code>{factor.feature}</code>
+                      <div className="analytics-factor-track"><i style={{ width: `${Math.max(0, Math.min(100, importancePercent))}%` }} /></div>
+                    </div>
+                  </details>
+                );
+              }) : signalRows.map((signal) => (
+                <details className="analytics-factor-row" key={signal.name}>
+                  <summary>
+                    <span className="analytics-factor-icon"><FontAwesomeIcon icon={faDatabase} aria-hidden="true" /></span>
+                    <span className="analytics-factor-copy"><strong>{signal.name}</strong><small>{signal.status} · {signal.freshness}</small></span>
+                    <b>Unavailable</b>
+                  </summary>
+                  <div className="analytics-factor-detail"><span>Signal contribution percentage is not returned by the current API.</span></div>
+                </details>
+              ))}
+            </div>
+            {modelFactors.length > 0 && <small className="analytics-factor-note">Percentages show model-reported feature importance, not per-service signal corroboration.</small>}
           </article>
+
           <article className="analytics-insight-panel">
-            <span className="panel-eyebrow">AI explanation</span>
-            <h2>{selectedNumber ? `Train ${selectedNumber} delay context` : "Network delay context"}</h2>
-            <p>{explanation}</p>
-            <div className="analytics-insight-metrics"><div><span>Primary factor</span><strong>{primaryReason?.replaceAll("_", " ") ?? "Unavailable"}</strong></div><div><span>Contribution</span><strong>Unavailable</strong></div><div><span>Evidence</span><strong>{analyticsSummary ? `${evidenceRows.length} / ${activeTrainCount ?? analyticsRows.length} records` : "Unavailable"}</strong></div><div><span>Confidence</span><strong>{confidencePercent == null ? "Unavailable" : `${confidencePercent}%`}</strong></div></div>
+            <div className="analytics-section-heading">
+              <div><span className="panel-eyebrow">AI decision</span><h2>{selectedNumber ? `Train ${selectedNumber}` : "Current ETA decision"}</h2></div>
+              <FontAwesomeIcon className="analytics-heading-icon" icon={faBrain} aria-hidden="true" />
+            </div>
+            <div className="analytics-decision-metrics">
+              <div><span>Predicted ETA</span><strong>{prediction?.predicted_arrival ? formatTime(prediction.predicted_arrival) : "Unavailable"}</strong></div>
+              <div><span>Model-predicted delay</span><strong>{prediction?.predicted_delay_minutes == null ? "Unavailable" : `${prediction.predicted_delay_minutes > 0 ? "+" : ""}${Math.round(prediction.predicted_delay_minutes)} min`}</strong></div>
+              <div><span>Confidence</span><strong>{confidencePercent == null ? "Unavailable" : `${confidencePercent}% · ${confidenceLevel}`}</strong></div>
+              <div><span>Evidence records</span><strong>{evidenceRecordCount == null || activeTrainCount == null ? "Unavailable" : `${evidenceRecordCount} / ${activeTrainCount}`}</strong></div>
+              <div><span>Model status</span><strong>{predictionStatus}</strong></div>
+            </div>
+            <div className="analytics-explanation-panel">
+              <span><FontAwesomeIcon icon={faBrain} aria-hidden="true" /> Backend explanation</span>
+              <p>{explanation ?? "Unavailable: no explanation was returned by the backend."}</p>
+            </div>
           </article>
+        </section>
+
+        <section className="analytics-network-grid">
+          <article className="analytics-premium-panel analytics-network-visual">
+            <div className="analytics-section-heading">
+              <div><span className="panel-eyebrow">Network connections</span><h2>Network Delay Visualization</h2><p>Service routes returned by the network summary.</p></div>
+              <FontAwesomeIcon className="analytics-heading-icon" icon={faMap} aria-hidden="true" />
+            </div>
+            {networkRoutes.length > 0 ? (
+              <div className="analytics-network-routes">
+                {networkRoutes.map((service) => (
+                  <article className="analytics-network-route" key={service.train_number}>
+                    <span className="analytics-network-route-node" />
+                    <div className="analytics-network-route-line" />
+                    <div className="analytics-network-route-copy">
+                      <strong>{service.source}</strong>
+                      <span>{service.train_number} · {service.train_name}</span>
+                      <strong>{service.destination}</strong>
+                    </div>
+                    <b className={service.delay_minutes > 0 ? "has-delay" : ""}>
+                      {Number.isFinite(service.delay_minutes) ? `${service.delay_minutes > 0 ? "+" : ""}${Math.round(service.delay_minutes)} min` : "Unavailable"}
+                    </b>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="analytics-chart-empty">Network route entities are unavailable.</div>
+            )}
+          </article>
+
+          <aside className="analytics-premium-panel analytics-network-overview">
+            <div className="analytics-section-heading">
+              <div><span className="panel-eyebrow">Network overview</span><h2>Coverage</h2></div>
+              <FontAwesomeIcon className="analytics-heading-icon" icon={faNetworkWired} aria-hidden="true" />
+            </div>
+            <div className="analytics-overview-metric"><span>Active services</span><strong>{activeTrainCount ?? "Unavailable"}</strong></div>
+            <div className="analytics-overview-metric"><span>Delay hotspots</span><strong>Unavailable</strong></div>
+            <div className="analytics-overview-metric"><span>Congested corridors</span><strong>Unavailable</strong></div>
+            <div className="analytics-overview-metric"><span>Live data coverage</span><strong>Unavailable</strong></div>
+          </aside>
         </section>
       </section>
     );
@@ -3301,7 +3669,7 @@ function App() {
         onOpenTrain={(trainNumber) => {
           setSelectedNumber(trainNumber);
           setPage("search", { parentPage: "corridors", label: "Back to Corridors" });
-          void syncTrainNumber(trainNumber);
+          void syncTrainNumber(trainNumber, true);
         }}
       />
     );
@@ -3313,7 +3681,7 @@ function App() {
         onOpenTrain={(trainNumber) => {
           setSelectedNumber(trainNumber);
           setPage("search", { parentPage: "network", label: "Back to Network Intelligence" });
-          void syncTrainNumber(trainNumber);
+          void syncTrainNumber(trainNumber, true);
         }}
       />
     );
@@ -3323,7 +3691,7 @@ function App() {
     <main className="app-shell">
       <header className="app-header">
         <button className="brand" onClick={() => setPage("home")}>
-          <img src="/rail-gaadi-logo.svg" alt="" />
+          <FontAwesomeIcon className="brand-train-icon" icon={faTrain} aria-hidden="true" />
           <strong>RAIL GAADI</strong>
         </button>
         <button
@@ -3418,6 +3786,19 @@ function App() {
           <div hidden={page !== "network"}>{networkView()}</div>
         )}
       </div>
+      {page === "search" &&
+        !selectedNumber.trim() &&
+        routeSearchResults.length === 0 &&
+        !stationSearchActive &&
+        !detailContext && (
+          <div className="train-search-empty-overlay" role="status">
+            <section className="train-search-empty-card">
+              <FontAwesomeIcon icon={faTrain} aria-hidden="true" />
+              <p>Go search the train first</p>
+            </section>
+          </div>
+        )}
+      <RequestProcessingModal />
     </main>
   );
 }

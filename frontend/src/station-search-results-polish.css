@@ -287,3 +287,41 @@
 @media (prefers-reduced-motion: reduce) {
   .route-search-modify, .route-train-card, .route-train-actions .refresh-live-button, .route-action-primary, .route-action-secondary, .route-action-primary svg { transition: none; }
 }
+
+.train-search-empty-overlay {
+  position: fixed;
+  z-index: 900;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(14, 34, 50, .14);
+  backdrop-filter: blur(1.5px);
+  pointer-events: none;
+}
+
+.train-search-empty-card {
+  display: grid;
+  justify-items: center;
+  gap: 11px;
+  min-width: 230px;
+  padding: 21px 26px;
+  border: 1px solid #dce5eb;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 10px 30px rgba(17, 43, 61, .15);
+  color: #0875c9;
+  text-align: center;
+}
+
+.train-search-empty-card svg {
+  width: 26px;
+  height: 26px;
+}
+
+.train-search-empty-card p {
+  margin: 0;
+  color: #173c58;
+  font-size: 15px;
+  font-weight: 700;
+}

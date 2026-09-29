@@ -324,7 +324,6 @@
 .schedule-intelligence .station-name > strong { overflow: hidden; color: var(--schedule-navy); font: 650 13px Inter, "Plus Jakarta Sans", system-ui, sans-serif; text-overflow: ellipsis; white-space: nowrap; }
 .station-code-platform { display: flex; align-items: center; gap: 6px; color: var(--schedule-muted); font: 500 9px Inter, "Plus Jakarta Sans", system-ui, sans-serif; }
 .station-code-platform b { color: #475569; font-weight: 700; letter-spacing: .04em; }
-.station-code-platform i { width: 3px; height: 3px; border-radius: 50%; background: #94a3b8; }
 .schedule-intelligence .station-ai-reason { max-width: 100%; margin: 0; color: #64748b !important; font: 500 8px Inter, "Plus Jakarta Sans", system-ui, sans-serif !important; text-overflow: ellipsis; }
 
 .station-state-badge {
@@ -461,4 +460,58 @@
   .station-timeline-item.current .station-rail-node,
   .schedule-intelligence .halt-toggle,
   .schedule-intelligence .halt-toggle svg { animation: none; transition: none; }
+}
+
+.schedule-live-location {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0 0 12px 48px;
+  color: #475569;
+  font: 500 10px Inter, "Plus Jakarta Sans", system-ui, sans-serif;
+}
+
+.schedule-live-location-label {
+  color: #64748b;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .05em;
+}
+
+.schedule-live-location strong {
+  color: #173c58;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.schedule-live-location strong i {
+  margin-left: 5px;
+  color: var(--schedule-blue);
+  font-size: 8px;
+  font-style: normal;
+  letter-spacing: .04em;
+}
+
+.schedule-live-location small {
+  color: #64748b;
+  font-size: 9px;
+}
+
+.station-route-boundary {
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: #e0f2fe;
+  color: #075985;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .03em;
+}
+
+.route-node-dot:not(.active) {
+  box-shadow: none;
+}
+
+@media (max-width: 720px) {
+  .schedule-live-location { margin-left: 38px; }
 }

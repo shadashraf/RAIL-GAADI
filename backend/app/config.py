@@ -19,7 +19,12 @@ class Settings(BaseSettings):
     railradar_api_key: str | None = Field(default=None)
     live_api_url: str | None = Field(default=None)
     api_access_key: str | None = Field(default=None)
-    cors_origins: str = Field(default="http://localhost:5173,http://127.0.0.1:5173")
+    cors_origins: str = Field(
+        default=(
+            "https://rail-gaadi-eta.web.app,https://rail-gaadi-eta.firebaseapp.com,"
+            "http://localhost:5173,http://127.0.0.1:5173"
+        )
+    )
     trusted_hosts: str = Field(default="localhost,127.0.0.1")
     db_pool_size: int = Field(default=5, ge=1)
     db_max_overflow: int = Field(default=10, ge=0)

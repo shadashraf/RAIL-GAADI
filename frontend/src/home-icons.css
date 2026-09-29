@@ -1,0 +1,30 @@
+.premium-home .home-fa-icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+  vertical-align: -0.125em;
+}
+
+.premium-home .premium-input-wrap .home-fa-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.premium-home .preview-train-icon .home-fa-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.premium-home .preview-train em .home-live-status-icon {
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
+  color: currentColor;
+}
+
+.premium-home .premium-corridor-grid h3 .home-route-icon {
+  width: 12px;
+  height: 12px;
+  margin-inline: 4px;
+}

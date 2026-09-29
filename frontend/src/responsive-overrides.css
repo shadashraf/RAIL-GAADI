@@ -1,0 +1,427 @@
+@media (max-width: 1200px) {
+  .mobile-nav-toggle {
+    position: absolute;
+    z-index: 1002;
+    top: 10px;
+    right: 14px;
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+  }
+
+  .app-header nav {
+    display: none;
+  }
+
+  .app-header nav.mobile-nav-open {
+    position: absolute;
+    z-index: 1001;
+    top: calc(100% + 4px);
+    right: 14px;
+    left: auto;
+    display: flex;
+    width: min(320px, calc(100vw - 28px));
+    height: auto;
+    max-height: min(70vh, 560px);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 3px;
+    overflow-y: auto;
+    padding: 7px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fffffff5;
+    box-shadow: 0 14px 28px #1d3b5220;
+    backdrop-filter: blur(12px);
+  }
+
+  .app-header nav.mobile-nav-open button {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    min-height: 44px;
+    height: 44px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 5px;
+    text-align: left;
+  }
+}
+
+@media (min-width: 721px) and (max-width: 1200px) {
+  .app-header {
+    gap: 12px;
+    padding-inline: 16px;
+  }
+
+  .app-header .brand {
+    min-width: 0;
+    padding-right: 14px;
+  }
+
+  .app-live-search-anchor {
+    flex: 0 0 auto;
+    margin-right: 48px;
+    margin-left: auto;
+  }
+
+  .app-header .header-search {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: auto;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-header nav.mobile-nav-open {
+    right: 14px;
+    left: 14px;
+    width: auto;
+  }
+}
+
+@media (max-width: 767px) {
+  .schedule-intelligence .station-name > strong {
+    display: block;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
+    line-height: 1.3;
+  }
+
+  .station-code-platform {
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .delay-analytics-page .delay-analytics-kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .delay-analytics-page .delay-analytics-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .live-metrics-strip article strong,
+  .live-metrics-strip article.prediction-metric strong {
+    font-size: 15px;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .live-metrics-strip article em {
+    overflow: visible;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .live-status-grid > div,
+  .live-status-grid > div strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .live-service-header h1 {
+    overflow-wrap: anywhere;
+  }
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+img,
+svg,
+canvas,
+video,
+iframe,
+object,
+embed {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+button,
+input,
+select,
+textarea {
+  max-width: 100%;
+  font: inherit;
+}
+
+button,
+input,
+select,
+textarea,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 1199px) {
+  .content,
+  .rail-home,
+  .route-search-page,
+  .live-service-page,
+  .analytics-page,
+  .delay-analytics-page,
+  .intelligence-page,
+  .live-trains-page,
+  .corridors-page {
+    width: 100%;
+    max-width: 100%;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .site-shell,
+  .app-shell,
+  .app-header,
+  .content {
+    min-width: 0;
+  }
+
+  .app-header {
+    gap: 12px;
+    padding-inline: 14px;
+  }
+
+  .app-header .brand {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .header-search {
+    min-width: 0;
+    max-width: min(42vw, 360px);
+    width: min(42vw, 360px);
+  }
+
+  .live-service-header,
+  .service-head,
+  .analytics-hero,
+  .intelligence-header,
+  .schedule-intelligence-header,
+  .corridor-header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 767px) {
+  .content,
+  .rail-home,
+  .route-search-page,
+  .live-service-page,
+  .analytics-page,
+  .delay-analytics-page,
+  .intelligence-page,
+  .live-trains-page,
+  .corridors-page {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .app-header {
+    padding-right: 56px;
+  }
+
+  .app-header .brand {
+    max-width: calc(100% - 8px);
+    overflow: hidden;
+  }
+
+  .app-header .brand strong,
+  .live-service-header h1,
+  .service-head h1,
+  .route-search-page h1,
+  .page-title h1,
+  .schedule-heading-copy h2,
+  .section-heading h2,
+  .analytics-hero h1,
+  .intelligence-header h1 {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.2;
+  }
+
+  .header-search {
+    width: min(180px, calc(100vw - 120px));
+    min-width: 0;
+  }
+
+  .header-search input {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .live-metrics-strip,
+  .analytics-kpis,
+  .delay-analytics-kpis,
+  .network-mini-stats,
+  .premium-stats,
+  .live-trains-grid,
+  .corridor-directory-grid,
+  .active-corridor-items,
+  .intelligence-grid,
+  .home-lower,
+  .home-search-grid,
+  .journey-summary,
+  .route-search-summary-bottom,
+  .routetable,
+  .map-legend,
+  .station-board-actions,
+  .service-actions,
+  .prediction-banner,
+  .live-status-grid,
+  .live-service-actions {
+    grid-template-columns: 1fr !important;
+    display: grid !important;
+    gap: 10px;
+  }
+
+  .route-search-page .route-search-summary,
+  .live-service-page .prediction-banner,
+  .live-service-page .live-status-card,
+  .route-search-page .route-results-toolbar,
+  .analytics-page .analytics-card,
+  .analytics-page .evidence-panel,
+  .delay-analytics-page .analytics-card,
+  .delay-analytics-page .evidence-panel,
+  .intelligence-page .panel,
+  .corridors-page .panel,
+  .live-trains-page .live-train-card,
+  .live-trains-page .search-panel,
+  .modal,
+  .loading-overlay,
+  .error-card,
+  .confirmation-card {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .schedule-intelligence .station-name > strong,
+  .station-name > strong,
+  .station-name strong {
+    display: block;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    text-overflow: clip;
+    line-height: 1.35;
+    max-width: 100%;
+  }
+
+  .station-code-platform,
+  .station-card-icon,
+  .station-name,
+  .station-identity,
+  .station-timing-group,
+  .station-prediction-group,
+  .journey-summary > div,
+  .live-status-grid > div,
+  .live-metrics-strip article,
+  .delay-analytics-kpi,
+  .analytics-kpi,
+  .network-mini-stats > div {
+    min-width: 0;
+  }
+
+  .schedule-intelligence .station-card,
+  .station-table,
+  .route-search-summary,
+  .table-container,
+  .map-panel,
+  .chart-panel,
+  .route-map-shell,
+  .service-map-large {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .route-search-summary-top,
+  .route-search-summary-bottom,
+  .route-search-journey,
+  .route-search-modify,
+  .corridor-card-top,
+  .live-train-card-top,
+  .analytics-kpi-top {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  .button,
+  .primary-button,
+  .mobile-nav-toggle,
+  .refresh-live-button,
+  .service-actions button,
+  .view-stations-button,
+  .route-search-modify,
+  .route-card button,
+  .corridor-card button {
+    min-height: 44px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .modal,
+  .loading-overlay,
+  .error-card,
+  .confirmation-card {
+    width: min(100vw - 20px, 420px);
+    max-width: calc(100vw - 20px);
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 420px) {
+  .app-header {
+    padding-inline: 12px;
+  }
+
+  .header-search {
+    width: min(150px, calc(100vw - 125px));
+  }
+
+  .live-service-header p,
+  .service-head p,
+  .schedule-heading-copy p,
+  .analytics-hero p,
+  .intelligence-header p,
+  .section-copy p {
+    overflow-wrap: anywhere;
+  }
+
+  .prediction-banner strong,
+  .live-metrics-strip article strong,
+  .prediction-confidence > strong {
+    letter-spacing: -0.04em;
+  }
+}

@@ -9,14 +9,16 @@
   border-right: 1px solid var(--line);
 }
 
-.app-header .brand img {
+.app-header .brand .brand-train-icon {
+  display: block;
+  flex: 0 0 28px;
   width: 28px;
   height: 28px;
-  object-fit: contain;
+  color: #0875c9;
   transition: transform 220ms ease, filter 220ms ease;
 }
 
-.app-header .brand:hover img {
+.app-header .brand:hover .brand-train-icon {
   transform: translateY(-1px) scale(1.06);
   filter: drop-shadow(0 4px 5px rgba(8, 117, 201, .2));
 }
@@ -31,6 +33,12 @@
 }
 
 @media (max-width: 720px) {
+  .app-header .brand .brand-train-icon {
+    flex-basis: 25px;
+    width: 25px;
+    height: 25px;
+  }
+
   .app-header .brand {
     min-width: 0;
     padding-right: 0;

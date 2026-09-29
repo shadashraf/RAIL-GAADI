@@ -26,6 +26,24 @@ export class ApiError extends Error {
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api/v1").replace(/\/$/, "");
 
+type ApiRequestListener = () => void;
+const apiRequestListeners = new Set<ApiRequestListener>();
+let pendingApiRequestCount = 0;
+
+export function subscribeToApiRequests(listener: ApiRequestListener) {
+  apiRequestListeners.add(listener);
+  return () => apiRequestListeners.delete(listener);
+}
+
+export function getProcessingRequestVisible() {
+  return pendingApiRequestCount > 0;
+}
+
+function updatePendingApiRequestCount(change: 1 | -1) {
+  pendingApiRequestCount = Math.max(0, pendingApiRequestCount + change);
+  apiRequestListeners.forEach((listener) => listener());
+}
+
 function userMessage(status?: number) {
   if (status === 404) return "The live provider did not find that station or route.";
   if (status === 429) return "The live provider is rate limiting requests. Try again shortly.";
@@ -37,42 +55,58 @@ function userMessage(status?: number) {
 }
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  let response: Response;
+  updatePendingApiRequestCount(1);
   try {
-    response = await fetch(`${API_BASE}${path}`, {
-      ...init,
-      headers: {
-        Accept: "application/json",
-        ...(init?.body ? { "Content-Type": "application/json" } : {}),
-        ...(import.meta.env.VITE_API_KEY ? { "X-API-Key": import.meta.env.VITE_API_KEY } : {}),
-        ...init?.headers,
-      },
-    });
-  } catch {
-    throw new ApiError("RailETA backend is unavailable. Start FastAPI and try again.", "network");
-  }
-
-  if (!response.ok) {
-    let detail: string | undefined;
+    let response: Response;
     try {
-      const payload = (await response.json()) as { detail?: string };
-      detail = payload.detail;
+      response = await fetch(`${API_BASE}${path}`, {
+        ...init,
+        headers: {
+          Accept: "application/json",
+          ...(init?.body ? { "Content-Type": "application/json" } : {}),
+          ...(import.meta.env.VITE_API_KEY ? { "X-API-Key": import.meta.env.VITE_API_KEY } : {}),
+          ...init?.headers,
+        },
+      });
     } catch {
-      detail = undefined;
+      throw new ApiError("RailETA backend is unavailable. Start FastAPI and try again.", "network");
     }
-    throw new ApiError(detail ?? userMessage(response.status), "http", response.status);
-  }
 
-  try {
-    return (await response.json()) as T;
-  } catch {
-    throw new ApiError("RailETA received an invalid response from the backend.", "invalid", response.status);
+    if (!response.ok) {
+      let detail: string | undefined;
+      try {
+        const payload = (await response.json()) as { detail?: string };
+        detail = payload.detail;
+      } catch {
+        detail = undefined;
+      }
+      throw new ApiError(detail ?? userMessage(response.status), "http", response.status);
+    }
+
+    try {
+      return (await response.json()) as T;
+    } catch {
+      throw new ApiError("RailETA received an invalid response from the backend.", "invalid", response.status);
+    }
+  } finally {
+    updatePendingApiRequestCount(-1);
   }
 }
 
 export const api = {
   searchTrains: (query = "") => apiFetch<unknown[]>(`/trains/search${query ? `?query=${encodeURIComponent(query)}` : ""}`),
-  searchStations: (query: string, signal?: AbortSignal) => apiFetch<LiveStationSearchResult[]>(`/trains/stations?query=${encodeURIComponent(query)}`, { signal }),
+  searchStations: async (query: string, signal?: AbortSignal) => {
+    const payload = await apiFetch<unknown>(`/trains/stations?query=${encodeURIComponent(query)}`, { signal });
+    if (!Array.isArray(payload)) return [];
+    return payload.filter((item): item is LiveStationSearchResult => {
+      if (!item || typeof item !== "object") return false;
+      const station = item as Partial<LiveStationSearchResult>;
+      return typeof station.station_code === "string" &&
+        station.station_code.trim().length > 0 &&
+        typeof station.station_name === "string" &&
+        station.station_name.trim().length > 0;
+    });
+  },
   searchTrainsBetween: (from: string, to: string) => {
     const params = new URLSearchParams({ from, to });
     return apiFetch<TrainRouteSearchResponse>(`/trains/search?${params.toString()}`);

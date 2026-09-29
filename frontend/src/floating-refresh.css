@@ -1,0 +1,96 @@
+.floating-live-refresh {
+  position: fixed;
+  z-index: 1200;
+  right: max(24px, calc((100vw - 1400px) / 2 + 24px));
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 7px 11px 7px 8px;
+  border: 1px solid rgba(120, 157, 177, .42);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .97);
+  color: #164c6c;
+  font: 800 11px Manrope, sans-serif;
+  box-shadow: 0 7px 22px rgba(16, 49, 68, .2);
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.floating-live-refresh:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: #64aac5;
+  box-shadow: 0 10px 25px rgba(16, 49, 68, .24);
+}
+
+.floating-live-refresh:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.floating-live-refresh:focus-visible {
+  outline: 3px solid #75c9e666;
+  outline-offset: 3px;
+}
+
+.floating-live-refresh:disabled {
+  cursor: wait;
+  opacity: .84;
+}
+
+.floating-live-refresh-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 50%;
+  background: rgba(8, 117, 201, .1);
+  color: #0875c9;
+}
+
+.floating-live-refresh-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.floating-live-refresh.is-refreshing .floating-live-refresh-icon svg {
+  animation: refresh-live-spin .9s linear infinite;
+}
+
+.floating-live-refresh.is-error {
+  border-color: rgba(205, 74, 74, .56);
+  color: #a43e42;
+}
+
+.floating-live-refresh.is-error .floating-live-refresh-icon {
+  background: rgba(205, 74, 74, .1);
+  color: #c4474c;
+}
+
+.live-service-page {
+  padding-bottom: 112px;
+}
+
+@media (max-width: 720px) {
+  .floating-live-refresh {
+    right: max(14px, env(safe-area-inset-right, 0px));
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .live-service-page {
+    padding-bottom: 108px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floating-live-refresh {
+    transition: none;
+  }
+
+  .floating-live-refresh.is-refreshing .floating-live-refresh-icon svg {
+    animation-duration: 2s;
+  }
+}
